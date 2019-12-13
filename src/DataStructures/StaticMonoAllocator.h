@@ -28,4 +28,6 @@ void* allocator_sm_alloc(AllocatorSM* alloc);
 /// all elements allocated by this allocator will be freed
 void allocator_sm_free(AllocatorSM* alloc);
 
+Allocator allocator_sm_get(AllocatorSM* elt);
+
 #endif //YADF_STATICMONOALLOCATOR_H

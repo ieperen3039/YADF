@@ -3,7 +3,7 @@
 #include "DataStructures/List.h"
 #include "global.h"
 #include "Tools.c"
-#include "Rendering/Shader.h"
+#include "Rendering/Phongshader.h"
 #include "Rendering/Render.h"
 
 volatile bool hasGLError = 0;
@@ -71,9 +71,7 @@ int main(int argc, char** argv) {
     LOG_INFO_F("Started GLFW with OpenGL version %s", glGetString(GL_VERSION));
 
     LOG_INFO("Initializing Shader");
-    char* vertex_shader = readFile("res/phong.vert", NULL);
-    char* fragment_shader = readFile("res/phong.frag", NULL);
-    ShaderID shader = shader_create(vertex_shader, fragment_shader, NULL);
+    Phongshader* shader = phong_create(NULL);
 
     LOG_INFO("Starting world");
     World* world = world_new(1000);
@@ -84,7 +82,7 @@ int main(int argc, char** argv) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glViewport(0, 0, window_width, window_height);
 
-        render_frame(shader, world, camera_new(&VECTOR_X), 0);
+        render_frame(phong_id(shader), world, camera_new(&VECTOR_X), 0);
 
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
@@ -96,7 +94,7 @@ int main(int argc, char** argv) {
         LOG_INFO("Closing due to a GL error\n");
     }
 
-    shader_free(shader);
+    phong_free(shader);
     glfwDestroyWindow(window);
     glfwTerminate();
 

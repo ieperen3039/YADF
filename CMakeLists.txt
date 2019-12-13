@@ -13,7 +13,7 @@ include_directories(include ${OPENGL_INCLUDE_DIRS} ${GLEW_INCLUDE_DIRS})
 add_executable(
         YADF
         src/main.c
-        src/Rendering/Shader.h src/Rendering/Shader.c
+        src/Rendering/Shader.h
         src/DataStructures/List.h
         src/DataStructures/Matrix4f.c
         src/DataStructures/Vector3f.c

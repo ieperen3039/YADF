@@ -12,7 +12,7 @@
 #include "Materials.h"
 
 #define CHUNK_COORD_BITS 4
-#define CHUNK_SIZE (1 << CHUNK_COORD_BITS)
+#define CHUNK_LENGTH (1 << CHUNK_COORD_BITS)
 
 typedef struct { // initialized as zero
     List item_ptrs;
@@ -21,10 +21,13 @@ typedef struct { // initialized as zero
 } WorldTile;
 
 typedef struct {
-    WorldTile tiles[CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE];
+    WorldTile tiles[CHUNK_LENGTH * CHUNK_LENGTH * CHUNK_LENGTH];
 } WorldChunk;
 
 typedef struct _World World;
+
+// accepts a tile and the coordinate of that tile
+typedef void(*TileFunction)(WorldTile, int x, int y, int z);
 
 /**
  * Creates a new world, uninitialized, of size `world_min_size` around (0,0,0)
@@ -40,8 +43,8 @@ World* world_new(int world_min_size);
 WorldTile* world_get_tile(World* world, Vector3i coord);
 
 /**
- * renders the world, starting at the given layer
+ * executes the given action for every tile at the given layer in the given chunk
  */
-void world_render_layer(World* world, int layer);
+void world_exec_layer(WorldChunk* chunk, int layer, TileFunction action);
 
 #endif //YADF2_WORLD_H

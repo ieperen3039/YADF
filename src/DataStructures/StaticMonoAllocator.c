@@ -48,3 +48,15 @@ void allocator_sm_free(AllocatorSM* alloc) {
     free(alloc);
 }
 
+static inline void* allocator_sm(Allocator* sm_alloc, size_t size) {
+    if (size != ((AllocatorSM*) sm_alloc)->element_size){
+        return NULL;
+    }
+    return allocator_sm_alloc(sm_alloc->object);
+}
+
+Allocator allocator_sm_get(AllocatorSM* elt) {
+    Allocator result = {elt, allocator_sm};
+    return result;
+}
+

@@ -50,12 +50,12 @@ static void list_free(List* vector) {
 }
 
 /// get the address of the element at the given index without bounds checking
-static inline void* list_get_unsafe(const List* vector, int index) {
+PURE static inline void* list_get_unsafe(const List* vector, int index) {
     return vector->_data + (index * vector->_element_size);
 }
 
 /// get a pointer to the element at the given index with bounds checking
-static inline void* list_get(List* vector, int index) {
+PURE static inline void* list_get(List* vector, int index) {
     if (index < 0 || index >= vector->_size) {
         return NULL;
     }
@@ -113,7 +113,7 @@ static inline void* list_pop(List* vector) {
 }
 
 /// returns the address of the given value in the list, or null if the value is not found
-static inline void* value_address(List* vector, void* value) {
+PURE static inline void* value_address(List* vector, void* value) {
     void* last = list_get_unsafe(vector, vector->_size);
     for (void* elt = vector->_data; elt < last; elt += vector->_element_size) {
         bool equal = memcmp(elt, value, vector->_element_size);
@@ -124,7 +124,7 @@ static inline void* value_address(List* vector, void* value) {
 }
 
 /// returns the index of the given value in the list, or -1 if no such value exists
-static inline int list_find_index(List* vector, void* value) {
+PURE static inline int list_find_index(List* vector, void* value) {
     void* ptr = value_address(vector, value);
     if (!ptr) return -1;
     return (int) ((ptr - vector->_data) / vector->_element_size);
@@ -148,12 +148,12 @@ static inline void list_pack(List* vector) {
 }
 
 /// current number of elements in the list
-static inline int list_get_size(List* vector) {
+PURE static inline int list_get_size(List* vector) {
     return vector->_size;
 }
 
 /// returns true iff (list_get_size(vector) == 0)
-static inline bool list_is_empty(List* vector) {
+PURE static inline bool list_is_empty(List* vector) {
     return vector->_size == 0;
 }
 
@@ -162,7 +162,7 @@ static inline bool list_is_empty(List* vector) {
  * Any change to this list invalidates this iterator, and using list_iterator_next after changes results in undefined behaviour.
  * This is likely to be faster than iterating over the index.
  */
-static inline ListIterator list_iterator(List* vector) {
+PURE static inline ListIterator list_iterator(List* vector) {
     return (ListIterator) {
             vector->_element_size,
             vector->_data,
@@ -171,7 +171,7 @@ static inline ListIterator list_iterator(List* vector) {
 }
 
 /// returns true iff there is an element left in the iterator, such that list_iterator_next will return a valid result.
-static inline bool list_iterator_has_next(ListIterator* iterator) {
+PURE static inline bool list_iterator_has_next(ListIterator* iterator) {
     return (iterator->_current != iterator->_end);
 };
 

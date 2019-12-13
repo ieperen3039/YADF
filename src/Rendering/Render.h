@@ -5,7 +5,6 @@
 #ifndef YADF2_RENDER_H
 #define YADF2_RENDER_H
 
-#include "Shader.h"
 #include "Camera.h"
 #include "../DataStructures/Matrix4f.h"
 #include "../DataStructures/Vector3f.h"
@@ -22,20 +21,11 @@ static void render_frame(ShaderID shader, World* world, Camera* camera, float as
     Matrix4f viewTransform = camera_get_transform(camera);
     matrix_mul(&viewProjection, &viewTransform, &viewProjection);
 
-
-    uniform mat4 modelMatrix;
-    uniform mat4 viewProjectionMatrix;
-    uniform mat3 normalMatrix;
-
 //    world_render_layer(world, 0);
     Mesh* cubeMesh = mesh_from_file("res/models/cube.obj");
     mesh_render(cubeMesh, viewProjection, shader);
 
     shader_unbind();
 }
-
-struct {
-
-};
 
 #endif //YADF2_RENDER_H

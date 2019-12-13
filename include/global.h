@@ -19,6 +19,17 @@ typedef int ErrorCode;
 #define LOG_ERROR(msg) lprintf(stderr, __FILE__, __LINE__, msg, true)
 #define LOG_ERROR_F(fmt, msg) lprintf(stderr, __FILE__, __LINE__, "", false); fprintf(stderr, fmt, msg)
 
+typedef struct _Allocator {
+    void* object;
+    void* (*get)(struct _Allocator* this, size_t);
+} Allocator;
+
+/// malloc(size_t) as an Allocator
+void* _system_malloc(Allocator* this, size_t size){
+    return malloc(size);
+}
+
+#define SYSTEM_ALLOCATOR (Allcator){NULL, _system_malloc}
 
 static void lprintf(FILE* out, const char* file_name, int line, const char* msg, bool newline) {
     char prefix[70];
@@ -27,5 +38,12 @@ static void lprintf(FILE* out, const char* file_name, int line, const char* msg,
     fprintf(out, "%-70s : %s", prefix, msg);
     if (newline) fprintf(out, "\n");
 }
+
+#ifdef __GNUC__
+/// PURE means that it doest change anything in the parameters
+#define PURE __attribute__ ((pure))
+#else
+#define PURE
+#endif // __GNUC__
 
 #endif //YADF2_GLOBAL_H
