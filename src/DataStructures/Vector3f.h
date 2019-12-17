@@ -7,22 +7,12 @@
 
 #include "Structs.h"
 
+#include <stdio.h>
+
 static Vector3fc VECTOR_ZERO = {0, 0, 0};
 static Vector3fc VECTOR_X = {1, 0, 0};
 static Vector3fc VECTOR_Y = {0, 1, 0};
 static Vector3fc VECTOR_Z = {0, 0, 1};
-
-/// (0, 0, 0)
-Vector3f vector_get_zero();
-
-/// (1, 0, 0)
-Vector3f vector_get_x();
-
-/// (0, 1, 0)
-Vector3f vector_get_y();
-
-/// (0, 0, 1)
-Vector3f vector_get_z();
 
 /**
  * Scale this vector to have length 1 and store the result in <code>dest</code>.
@@ -107,5 +97,42 @@ Vector3f* vector_cross(Vector3f* vec, Vector3fc* other);
 float vector_length_sq(Vector3fc* vec);
 
 float vector_length(Vector3fc* vec);
+
+/** 
+ * If dest is not null and the string representation of vec is smaller than str_size, 
+ * then the string representation of vector vec is written into dest.
+ * Returns the size of the string representation of vec.
+ * 
+ * To get a stack-allocated string, one can use the following snippet:
+ * @code
+ * Vector4f vec;
+ * int length = vector_to_string(vec, NULL, 0);
+ * char str[length]
+ * vector_to_string(vec, str, length);
+ * // str contains vec
+ * @endcode
+ * 
+ * To print multiple vectors:
+ * @code
+ * Vector4f vec1, vec2;
+ * int length1 = vector_to_string(vec1, NULL, 0);
+ * int length2 = vector_to_string(vec2, NULL, 0);
+ * char str[length1 + length2]
+ * int loc = vector_to_string(vec, str, length1 + length2); // loc == length1
+ * vector_to_string(vec2, str + loc, length2);
+ * // str contains vec1vec2
+ * @endcode
+ */
+static inline int vector_to_string(Vector3fc* vec, char* dest, int str_size) {
+    const int SIZE = 3 * (6 + 2);
+
+    if (dest != NULL && str_size <= SIZE) {
+        sprintf(dest,
+                "(%6.03f, %6.03f, %6.03f)",
+                vec->x, vec->y, vec->z
+        );
+    }
+    return SIZE;
+}
 
 #endif //YADF2_VECTOR3F_H

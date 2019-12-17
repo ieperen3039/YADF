@@ -1,10 +1,13 @@
-#include <stdio.h>
 #include "DataStructures/Matrix4f.h"
 #include "DataStructures/List.h"
 #include "global.h"
-#include "Tools.c"
+#include "Tools.h"
 #include "Rendering/Phongshader.h"
 #include "Rendering/Render.h"
+#include "World/World.h"
+
+#include <stdio.h>
+#include <glfw3.h>
 
 volatile bool hasGLError = 0;
 
@@ -71,18 +74,27 @@ int main(int argc, char** argv) {
     LOG_INFO_F("Started GLFW with OpenGL version %s", glGetString(GL_VERSION));
 
     LOG_INFO("Initializing Shader");
-    Phongshader* shader = phong_create(NULL);
+    Phongshader* shader = phong_create();
+    if (!shader) return(EXIT_FAILURE);
 
     LOG_INFO("Starting world");
     World* world = world_new(1000);
+    if (!world) return(EXIT_FAILURE);
+    Camera* camera = camera_new(&VECTOR_X);
 
     LOG_INFO("Setup done!");
+
+    Matrix4f t = camera_get_transform(camera);
+    int l = matrix_to_string(&t, NULL, 0);
+    char str[l];
+    matrix_to_string(&t, str, l);
+    LOG_INFO_F("Camera transform: %s", str);
 
     while (!glfwWindowShouldClose(window) && !hasGLError) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glViewport(0, 0, window_width, window_height);
 
-        render_frame(phong_id(shader), world, camera_new(&VECTOR_X), 0);
+        render_frame(shader, world, camera, 0);
 
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
@@ -91,12 +103,14 @@ int main(int argc, char** argv) {
     }
 
     if (hasGLError) {
-        LOG_INFO("Closing due to a GL error\n");
+        LOG_INFO("Closing due to a GL error...");
+    } else {
+        LOG_INFO("Closing...");
     }
 
     phong_free(shader);
     glfwDestroyWindow(window);
     glfwTerminate();
 
-    return 0;
+    return EXIT_SUCCESS;
 }

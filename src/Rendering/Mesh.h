@@ -5,7 +5,6 @@
 #ifndef YADF2_MESH_H
 #define YADF2_MESH_H
 
-#include <stdlib.h>
 #include <GL/glew.h>
 #include "../DataStructures/List.h"
 #include "Structs.h"
@@ -32,7 +31,7 @@ Mesh* mesh_from_arrays(float* normals, float* positions, int num_vertices);
  */
 Mesh* mesh_from_file(const char* file_name);
 
-void mesh_render(Mesh* mesh, Matrix4f transform, ShaderID shader);
+void mesh_render(Mesh* mesh);
 
 void mesh_free(Mesh* mesh);
 

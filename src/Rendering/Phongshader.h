@@ -5,6 +5,10 @@
 #ifndef YADF_PHONGSHADER_H
 #define YADF_PHONGSHADER_H
 
+#include <global.h>
+#include <GL/glew.h>
+#include "../DataStructures/Matrix4f.h"
+
 typedef struct _Phongshader Phongshader;
 
 /// create a new phong shader, should only be called once
@@ -14,14 +18,14 @@ void phong_bind(Phongshader* shader);
 
 void phong_unbind(Phongshader* shader);
 
-void phong_set_model_matrix(Phongshader* shader, float matrix[16]);
+void phong_set_model_matrix(Phongshader* shader, Matrix4f* matrix);
 
-void phong_set_view_projection_matrix(Phongshader* shader, float matrix[16]);
-
-void phong_set_normal_matrix(Phongshader* shader, float matrix[9]);
+void phong_set_view_projection_matrix(Phongshader* shader, Matrix4f* matrix);
 
 void phong_free(Phongshader* shader);
 
 GLuint phong_id(Phongshader* shader);
+
+void phong_add_light(Phongshader* shader, Vector3fc position, Color4f color, float intensity, bool infinite);
 
 #endif //YADF_PHONGSHADER_H

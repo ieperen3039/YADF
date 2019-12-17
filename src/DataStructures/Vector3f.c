@@ -17,9 +17,9 @@ Vector3f* vector_set_zero(Vector3f* target) {
 }
 
 Vector3f* vector_mul_position(Vector3f* vec, const Matrix4f* mat) {
-    float x = mat->m00 * vec->x + mat->m10 * vec->y + mat->m20 * vec->z + mat->m30;
-    float y = mat->m01 * vec->x + mat->m11 * vec->y + mat->m21 * vec->z + mat->m31;
-    float z = mat->m02 * vec->x + mat->m12 * vec->y + mat->m22 * vec->z + mat->m32;
+    float x = mat->m[0][0] * vec->x + mat->m[1][0] * vec->y + mat->m[2][0] * vec->z + mat->m[3][0];
+    float y = mat->m[0][1] * vec->x + mat->m[1][1] * vec->y + mat->m[2][1] * vec->z + mat->m[3][1];
+    float z = mat->m[0][2] * vec->x + mat->m[1][2] * vec->y + mat->m[2][2] * vec->z + mat->m[3][2];
     vec->x = x;
     vec->y = y;
     vec->z = z;
@@ -27,9 +27,9 @@ Vector3f* vector_mul_position(Vector3f* vec, const Matrix4f* mat) {
 }
 
 Vector3f* vector_mul_direction(Vector3f* vec, const Matrix4f* mat) {
-    float x = mat->m00 * vec->x + mat->m10 * vec->y + mat->m20 * vec->z;
-    float y = mat->m01 * vec->x + mat->m11 * vec->y + mat->m21 * vec->z;
-    float z = mat->m02 * vec->x + mat->m12 * vec->y + mat->m22 * vec->z;
+    float x = mat->m[0][0] * vec->x + mat->m[1][0] * vec->y + mat->m[2][0] * vec->z;
+    float y = mat->m[0][1] * vec->x + mat->m[1][1] * vec->y + mat->m[2][1] * vec->z;
+    float z = mat->m[0][2] * vec->x + mat->m[1][2] * vec->y + mat->m[2][2] * vec->z;
     vec->x = x;
     vec->y = y;
     vec->z = z;

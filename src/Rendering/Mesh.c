@@ -4,6 +4,8 @@
 
 #include "Mesh.h"
 #include "Shader.h"
+#include "../Tools.h"
+#include <stdlib.h>
 
 #define VERTEX_LOCATION 0
 #define NORMAL_LOCATION 1
@@ -19,26 +21,26 @@ typedef struct {
     int norm[3];
 } Face;
 
-float getNextFloat(const char* space, char** line_tok) {
+static inline float getNextFloat(const char* space, char** line_tok) {
     return strtof(strtok_r(NULL, space, line_tok), NULL);
 }
 
-void readVector(int vectorNumber, List* sourceList, float* targetArray, int index) {
-    Vector3f* vertex = list_get(sourceList, index);
+static inline void readVector(int vectorNumber, List* sourceList, float* targetArray, int index) {
+    Vector3f* vertex = list_get_checked(sourceList, index);
     int offset = vectorNumber * 3;
     targetArray[offset] = vertex->x;
     targetArray[offset + 1] = vertex->y;
     targetArray[offset + 2] = vertex->z;
 }
 
-void readFaceVertex(Face* face, List* posList, int faceNumber, float* posArr) {
+static inline void readFaceVertex(Face* face, List* posList, int faceNumber, float* posArr) {
     int vectorIndex = faceNumber * 3;
     for (int i = 0; i < 3; i++) {
         readVector(vectorIndex + i, posList, posArr, face->vert[i]);
     }
 }
 
-void readFaceNormals(Face* face, List* normList, int faceNumber, float* normArr) {
+static inline void readFaceNormals(Face* face, List* normList, int faceNumber, float* normArr) {
     int vectorIndex = faceNumber * 3;
     for (int i = 0; i < 3; i++) {
         readVector(vectorIndex + i, normList, normArr, face->norm[i]);
@@ -144,23 +146,17 @@ Mesh* mesh_from_file(const char* file_name) {
     float posArr[num_vertices * 3];
     float normArr[num_vertices * 3];
 
-    // write to GPU
+    // write to arrays
     for (int i = 0; i < list_get_size(faces); ++i) {
-        Face* face = list_get_unsafe(faces, i);
+        Face* face = list_get(faces, i);
         readFaceVertex(face, vertices, i, posArr);
         readFaceNormals(face, normals, i, normArr);
     }
 
-    Mesh* mesh = mesh_from_arrays(normArr, posArr, num_vertices);
-
-    return mesh;
+    return mesh_from_arrays(normArr, posArr, num_vertices);
 }
 
-void mesh_render(Mesh* mesh, Matrix4f transform, ShaderID shader) {
-    // write transform to gl
-    glGetUniformLocation(shader, uniformName)
-    glUniformMatrix4fv(unif(uniformName), false, fb);
-
+void mesh_render(Mesh* mesh) {
     glBindVertexArray(mesh->VAO_ID);
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);

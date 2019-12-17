@@ -50,22 +50,22 @@ static void list_free(List* vector) {
 }
 
 /// get the address of the element at the given index without bounds checking
-PURE static inline void* list_get_unsafe(const List* vector, int index) {
+PURE static inline void* list_get(const List* vector, int index) {
     return vector->_data + (index * vector->_element_size);
 }
 
 /// get a pointer to the element at the given index with bounds checking
-PURE static inline void* list_get(List* vector, int index) {
+PURE static inline void* list_get_checked(List* vector, int index) {
     if (index < 0 || index >= vector->_size) {
         return NULL;
     }
 
-    return list_get_unsafe(vector, index);
+    return list_get(vector, index);
 }
 
 /// copy the element pointed to by *value* into this list at the given index
 static inline ErrorCode list_set(List* vector, int index, void* value) {
-    void* addr = list_get(vector, index);
+    void* addr = list_get_checked(vector, index);
     if (!addr) return ERROR_NONE;
 
     memcpy(addr, value, vector->_element_size);
@@ -85,14 +85,14 @@ static inline void list_resize(List* vector, int new_size) {
 /// copy the element pointed to by *value* to the end of this list. The value must have the size used in the constructor of this object
 static inline void list_add(List* vector, void* value) {
     list_resize(vector, vector->_size);
-    void* addr = list_get_unsafe(vector, vector->_size++);
+    void* addr = list_get(vector, vector->_size++);
     memcpy(addr, value, vector->_element_size);
 }
 
 /// removes a specific element from the list, and shifts all other elements one down.
 /// See list_pop(List*) to remove and retrieve the last element.
 static inline ErrorCode list_delete_index(List* vector, int index) {
-    void* tgt = list_get(vector, index);
+    void* tgt = list_get_checked(vector, index);
     if (!tgt) return ERROR_NONE;
 
     size_t copy_size = ((vector->_size - index) * vector->_capacity);
@@ -109,12 +109,12 @@ static inline void list_push(List* vector, void* value) {
 
 /// removes the element at the end of this list.
 static inline void* list_pop(List* vector) {
-    return list_get_unsafe(vector, --vector->_size);
+    return list_get(vector, --vector->_size);
 }
 
 /// returns the address of the given value in the list, or null if the value is not found
 PURE static inline void* value_address(List* vector, void* value) {
-    void* last = list_get_unsafe(vector, vector->_size);
+    void* last = list_get(vector, vector->_size);
     for (void* elt = vector->_data; elt < last; elt += vector->_element_size) {
         bool equal = memcmp(elt, value, vector->_element_size);
         if (equal) return elt;
@@ -134,7 +134,7 @@ PURE static inline int list_find_index(List* vector, void* value) {
 static inline ErrorCode list_delete_value(List* vector, void* value) {
     void* tgt = value_address(vector, value);
     if (!tgt) return ERROR_NONE;
-    size_t copy_size = list_get_unsafe(vector, vector->_size) - (tgt + vector->_element_size);
+    size_t copy_size = list_get(vector, vector->_size) - (tgt + vector->_element_size);
     memmove(tgt + vector->_element_size, tgt, copy_size);
     vector->_size -= 1;
 
@@ -175,7 +175,7 @@ PURE static inline bool list_iterator_has_next(ListIterator* iterator) {
     return (iterator->_current != iterator->_end);
 };
 
-/// gets the next element from the given iterator. If !list_iterator_has_next(ListIterator), then the result is undefined (likely a segfault)
+/// returns a pointer to the next element from the given iterator. If !list_iterator_has_next(ListIterator), then the result is undefined (likely a segfault)
 static inline void* list_iterator_next(ListIterator* iterator) {
     void* elt = iterator->_current;
     iterator->_current += iterator->_element_size;

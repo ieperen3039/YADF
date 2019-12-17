@@ -9,6 +9,7 @@
 #include "Structs.h"
 #include <string.h>
 #include <stdbool.h>
+#include <global.h>
 
 #define PROPERTY_IDENTITY 0x01
 #define PROPERTY_AFFINE 0x02
@@ -60,7 +61,7 @@ void matrix_set_identity(Matrix4f* dest);
  * @param source the matrix to read from
  * @param dest will hold the result
  *  */
-void matrix_copy_to(Matrix4f* source, Matrix4f* dest);
+void matrix_copy_to(Matrix4fc* source, Matrix4f* dest);
 
 /**
  * multiplies the `first` matrix with `second` as (first * second)
@@ -107,7 +108,9 @@ Vector3f* matrix_project(Matrix4f* this, float x, float y, float z, const int vi
  * @param dest
  *             will hold the result
  *  */
-void matrix_normal(Matrix4f* this, Matrix4f* dest);
+void matrix_get_normal(Matrix4f* this, Matrix4f* dest);
+
+void matrix_translate(Matrix4fc* this, Vector3fc* translation, Matrix4f* dest);
 
 /**
  * does a deep-compare of the two given matrices. This differs from (memcmp(one, two, sizeof(Matrix4f)) != 0) in that
@@ -115,6 +118,60 @@ void matrix_normal(Matrix4f* this, Matrix4f* dest);
  * @return true if one is effectively the same as two
  */
 bool matrix_equals(Matrix4f* one, Matrix4f* two);
+
+/** returns a pointer to the values in this matrix as an array of size 16 */
+PURE static inline float* matrix_as_array(Matrix4f* mat) {
+    return (float*) mat->m;
+};
+
+/** copies the upper left area of the matrix to the given array */
+static inline void matrix_get_upper_left(Matrix4f* source, float dest[9]) {
+    int i = 0;
+    for (int u = 0; u < 3; ++u) {
+        for (int v = 0; v < 3; ++v) {
+            dest[i++] = source->m[u][v];
+        }
+    }
+}
+
+/** 
+ * If dest is not null and the string representation of mat is smaller than str_size,
+ * then the string representation of matrix mat is written into dest.
+ * Returns the size of the buffer needed to fit the string including null-delimiter.
+ * This function behaves identical to snprintf(char*, int, const char*, ...).
+ * 
+ * To get a stack-allocated string, one can use the following snippet:
+ * @code
+ * Matrix4f mat;
+ * int length = matrix_to_string(mat, NULL, 0);
+ * char str[length + 1];
+ * matrix_to_string(mat, str, length + 1);
+ * // str contains [mat\0]
+ * @endcode
+ *
+ * To print multiple matrices:
+ * @code
+ * Matrix4f mat1, mat2;
+ * int length1 = matrix_to_string(mat1, NULL, 0);
+ * int length2 = matrix_to_string(mat2, NULL, 0);
+ * char str[length1 - 1 + length2];
+ * int loc = matrix_to_string(mat, str, length1 - 1 + length2); // loc == length1
+ * matrix_to_string(mat2, str + loc - 1, length2);
+ * // str contains [mat1mat2\0]
+ * @endcode
+ *
+ * @return the size of the string representation of mat, including null-delimiter.
+ */
+static inline int matrix_to_string(Matrix4fc* mat, char* dest, int str_size) {
+    return snprintf( // this took longer than it had to
+            dest, str_size,
+            "[[%6.03f, %6.03f, %6.03f, %6.03f][%6.03f, %6.03f, %6.03f, %6.03f][%6.03f, %6.03f, %6.03f, %6.03f][%6.03f, %6.03f, %6.03f, %6.03f]]",
+            mat->m[0][0], mat->m[1][0], mat->m[2][0], mat->m[3][0],
+            mat->m[0][1], mat->m[1][1], mat->m[2][1], mat->m[3][1],
+            mat->m[0][2], mat->m[1][2], mat->m[2][2], mat->m[3][2],
+            mat->m[0][3], mat->m[1][3], mat->m[2][3], mat->m[3][3]
+    );
+}
 
 
 #endif //YADF2_MATRIX4F_H

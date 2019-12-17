@@ -12,10 +12,11 @@
 
 typedef struct _Camera Camera;
 
-Camera* camera_new(const Vector3f* focus);
+Camera* camera_new(Vector3fc* focus);
 
 float camera_get_view_width(Camera* cam);
 
+/** @return the view transformation of the camera */
 Matrix4f camera_get_transform(Camera* cam);
 
 #endif //YADF_CAMERA_H

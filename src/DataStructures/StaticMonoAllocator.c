@@ -41,18 +41,18 @@ Type* allocator_sm_alloc(AllocatorSM* alloc) {
 void allocator_sm_free(AllocatorSM* alloc) {
     List* data_blocks = &alloc->all_blocks;
     for (int i = 0; i < list_get_size(data_blocks); ++i) {
-        Type* data_block = *((Type**) list_get_unsafe(data_blocks, i));
+        Type* data_block = *((Type**) list_get(data_blocks, i));
         free(data_block);
     }
     list_free(data_blocks);
     free(alloc);
 }
 
-static inline void* allocator_sm(Allocator* sm_alloc, size_t size) {
+static void* allocator_sm(void* sm_alloc, size_t size) {
     if (size != ((AllocatorSM*) sm_alloc)->element_size){
         return NULL;
     }
-    return allocator_sm_alloc(sm_alloc->object);
+    return allocator_sm_alloc(sm_alloc);
 }
 
 Allocator allocator_sm_get(AllocatorSM* elt) {
