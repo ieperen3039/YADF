@@ -7,14 +7,14 @@
 struct _Camera {
     Vector3f focus;
     float zoom;
-    unsigned char rotation;
+    float theta; // rotation angle
 };
 
 Camera* camera_new(Vector3fc* focus) {
     Camera* this = malloc(sizeof(Camera));
     this->focus = *focus; // copy
-    this->rotation = 0;
-    this->zoom = 0.01f;
+    this->theta = 1;
+    this->zoom = 0.05f;
     return this;
 }
 
@@ -22,39 +22,69 @@ float camera_get_view_width(Camera* cam) {
     return 1.0f / cam->zoom;
 }
 
-Matrix4f camera_get_transform(Camera* cam) {
-    float centerX = cam->focus.x;
-    float centerY = cam->focus.y;
-    float centerZ = cam->focus.z;
-    // Compute direction from position to lookAt
-    float dirX = (float) ((cam->rotation % 1) > 0) ? -sqrtf(3) : sqrtf(3);
-    float dirY = (float) ((cam->rotation % 2) > 0) ? -sqrtf(3) : sqrtf(3);
-    float dirZ = (float) -sqrtf(3);
+void camera_set_perspective(Camera* cam, float angle, float zoom) {
+    cam->theta = angle;
+    cam->zoom = zoom;
+}
+
+void camera_set_focus(Camera* cam, Vector3fc* focus) {
+    cam->focus = *focus;
+}
+
+PURE Matrix4f camera_get_transform(Camera* cam) {
+    const float centerX = cam->focus.x;
+    const float centerY = cam->focus.y;
+    const float centerZ = cam->focus.z;
+    const float upX = 0;
+    const float upY = 0;
+    const float upZ = 1;
+
+    float dirX = cosf(cam->theta);
+    float dirY = sinf(cam->theta);
+    float dirZ = 1;
+    // normalize direction
+    float invDirLength = 1.0f / sqrtf(dirX * dirX + dirY * dirY + dirZ * dirZ);
+    dirX *= invDirLength;
+    dirY *= invDirLength;
+    dirZ *= invDirLength;
 
     // left = up x direction
-    float leftX = -dirY;
-    float leftY = dirX;
+    float leftX = upY * dirZ - upZ * dirY;
+    float leftY = upZ * dirX - upX * dirZ;
+    float leftZ = upX * dirY - upY * dirX;
     // normalize left
-    float invLeftLength = 1.0f / (float) sqrtf(leftX * leftX + leftY * leftY);
+    float invLeftLength = 1.0f / sqrtf(leftX * leftX + leftY * leftY + leftZ * leftZ);
     leftX *= invLeftLength;
     leftY *= invLeftLength;
+    leftZ *= invLeftLength;
     // up = direction x left
-    float upnX = -dirZ * leftY;
-    float upnY = dirZ * leftX;
+    float upnX = dirY * leftZ - dirZ * leftY;
+    float upnY = dirZ * leftX - dirX * leftZ;
     float upnZ = dirX * leftY - dirY * leftX;
+    float eyeX = centerX + dirX;
+    float eyeY = centerY + dirY;
+    float eyeZ = centerZ + dirZ;
 
     Matrix4f this = {
-            {
+            .m = {
                     {leftX, upnX, dirX, 0.0f},
                     {leftY, upnY, dirY, 0.0f},
-                    {0.0f, upnZ, dirZ, 0.0f},
+                    {leftZ, upnZ, dirZ, 0.0f},
                     {
-                            -(leftX * (centerX + 1) + leftY * (centerY + 1)),
-                            -(upnX * (centerX + 1) + upnY * (centerY + 1) + upnZ * (centerZ + 1)),
-                            -(dirX * (centerX + 1) + dirY * (centerY + 1) + dirZ * (centerZ + 1)),
+                            -(leftX * eyeX + leftY * eyeY + leftZ * eyeZ),
+                            -(upnX * eyeX + upnY * eyeY + upnZ * eyeZ),
+                            -(dirX * eyeX + dirY * eyeY + dirZ * eyeZ),
                             (1.0f)
                     }
-            }, (PROPERTY_AFFINE | PROPERTY_ORTHONORMAL)
+            },
+            .properties = (PROPERTY_AFFINE | PROPERTY_ORTHONORMAL)
     };
+
     return this;
+
+}
+
+Vector3f camera_get_eye(Camera* cam) {
+    float angle = cam->theta;
+    return (Vector3f) {cosf(angle), sinf(angle), 1};
 }

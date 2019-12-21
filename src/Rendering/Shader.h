@@ -6,9 +6,6 @@
 #define YADF2_SHADER_H
 
 #include <malloc.h>
-//
-// Created by ieperen3039 on 25-11-19.
-//
 #include "global.h"
 
 /// @see #new_Shader(const char*, const char* const char*)
@@ -32,9 +29,9 @@ static inline void printProgramLog(GLuint program) {
     free(msg);
 }
 
-static inline GLuint createShader(const char* vertex_shader_text, int type) {
+static inline GLuint createShader(const char* shader_text, int type) {
     GLuint shader = glCreateShader(type);
-    glShaderSource(shader, 1, &vertex_shader_text, NULL);
+    glShaderSource(shader, 1, &shader_text, NULL);
     glCompileShader(shader);
 
     GLint status = 0;

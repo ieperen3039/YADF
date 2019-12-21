@@ -14,9 +14,15 @@ typedef struct _Camera Camera;
 
 Camera* camera_new(Vector3fc* focus);
 
+void camera_set_perspective(Camera* cam, float angle, float zoom);
+
+void camera_set_focus(Camera* cam, Vector3fc* focus);
+
+Vector3f camera_get_eye(Camera* cam);
+
 float camera_get_view_width(Camera* cam);
 
 /** @return the view transformation of the camera */
-Matrix4f camera_get_transform(Camera* cam);
+PURE Matrix4f camera_get_transform(Camera* cam);
 
 #endif //YADF_CAMERA_H

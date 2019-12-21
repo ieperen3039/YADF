@@ -36,6 +36,7 @@ static char* readFile(char* filename, int* strlen) {
         LOG_ERROR_F("IO error: %s", strerror(errno));
         return NULL;
     }
+    buffer[items_read] = '\0'; // seems to miss sometimes
 
     if (strlen) *strlen = lSize;
 

@@ -99,40 +99,38 @@ float vector_length_sq(Vector3fc* vec);
 float vector_length(Vector3fc* vec);
 
 /** 
- * If dest is not null and the string representation of vec is smaller than str_size, 
+ * If dest is not null and the string representation of vec is smaller than str_size,
  * then the string representation of vector vec is written into dest.
- * Returns the size of the string representation of vec.
+ * Returns the size of the buffer needed to fit the string including null-delimiter.
+ * This function behaves identical to snprintf(char*, int, const char*, ...).
  * 
  * To get a stack-allocated string, one can use the following snippet:
  * @code
  * Vector4f vec;
  * int length = vector_to_string(vec, NULL, 0);
- * char str[length]
- * vector_to_string(vec, str, length);
- * // str contains vec
+ * char str[length + 1];
+ * vector_to_string(vec, str, length + 1);
+ * // str contains [vec\0]
  * @endcode
- * 
- * To print multiple vectors:
+ *
+ * To print multiple vertices:
  * @code
  * Vector4f vec1, vec2;
  * int length1 = vector_to_string(vec1, NULL, 0);
  * int length2 = vector_to_string(vec2, NULL, 0);
- * char str[length1 + length2]
- * int loc = vector_to_string(vec, str, length1 + length2); // loc == length1
- * vector_to_string(vec2, str + loc, length2);
- * // str contains vec1vec2
+ * char str[length1 - 1 + length2];
+ * int loc = vector_to_string(vec, str, length1 - 1 + length2); // loc == length1
+ * vector_to_string(vec2, str + loc - 1, length2);
+ * // str contains [vec1vec2\0]
  * @endcode
+ *
+ * @return the size of the string representation of vec, including null-delimiter.
  */
 static inline int vector_to_string(Vector3fc* vec, char* dest, int str_size) {
-    const int SIZE = 3 * (6 + 2);
-
-    if (dest != NULL && str_size <= SIZE) {
-        sprintf(dest,
-                "(%6.03f, %6.03f, %6.03f)",
-                vec->x, vec->y, vec->z
-        );
-    }
-    return SIZE;
+    return snprintf(dest, str_size,
+                   "(%6.03f, %6.03f, %6.03f)",
+                   vec->x, vec->y, vec->z
+    );
 }
 
 #endif //YADF2_VECTOR3F_H

@@ -22,7 +22,7 @@ typedef struct _Mesh Mesh;
  * @throws IllegalArgumentException if the arrays are of unequal length
  * @throws IllegalStateException    if the mesh is already loaded
  */
-Mesh* mesh_from_arrays(float* normals, float* positions, int num_vertices);
+Mesh* mesh_from_arrays(float* normals, float* positions, int* materials, int num_vertices);
 
 /**
  * create a mesh and store it to the GPU.

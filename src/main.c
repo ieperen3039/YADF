@@ -11,9 +11,6 @@
 
 volatile bool hasGLError = 0;
 
-volatile int window_width = 800;
-volatile int window_height = 600;
-
 static void glfwErrorCallback(int error, const char* description) {
     LOG_ERROR_F("GLFW Error: %s", description);
 }
@@ -31,11 +28,6 @@ static void GLAPIENTRY glErrorCallback(
     }
 }
 
-static void glfwResizeCallback(GLFWwindow* w, int width, int height) {
-    window_width = width;
-    window_height = height;
-}
-
 int main(int argc, char** argv) {
     LOG_INFO("Starting GLFW");
     glfwSetErrorCallback(glfwErrorCallback);
@@ -45,6 +37,8 @@ int main(int argc, char** argv) {
         LOG_ERROR("Failed GLFW init");
         return EXIT_FAILURE;
     }
+    int window_width = 800;
+    int window_height = 600;
     GLFWwindow* window = glfwCreateWindow(window_width, window_height, "View", NULL, NULL);
 
     if (!window) {
@@ -55,7 +49,6 @@ int main(int argc, char** argv) {
 
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
-    glfwSetWindowSizeCallback(window, glfwResizeCallback);
 
     LOG_INFO("Starting OpenGL");
     GLenum error = glewInit();
@@ -68,6 +61,8 @@ int main(int argc, char** argv) {
     glDebugMessageCallback(glErrorCallback, NULL);
 
     glClearColor(1.0f, 0.0f, 1.0f, 0.0f); // magenta
+//    glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // black
+    glEnable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
@@ -80,21 +75,16 @@ int main(int argc, char** argv) {
     LOG_INFO("Starting world");
     World* world = world_new(1000);
     if (!world) return(EXIT_FAILURE);
-    Camera* camera = camera_new(&VECTOR_X);
+    Camera* camera = camera_new(&VECTOR_ZERO);
 
     LOG_INFO("Setup done!");
 
-    Matrix4f t = camera_get_transform(camera);
-    int l = matrix_to_string(&t, NULL, 0);
-    char str[l];
-    matrix_to_string(&t, str, l);
-    LOG_INFO_F("Camera transform: %s", str);
-
     while (!glfwWindowShouldClose(window) && !hasGLError) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glfwGetWindowSize(window, &window_width, &window_height);
         glViewport(0, 0, window_width, window_height);
-
-        render_frame(shader, world, camera, 0);
+        
+        render_frame(shader, world, camera, (float) window_width / (float) window_height);
 
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
@@ -104,6 +94,7 @@ int main(int argc, char** argv) {
 
     if (hasGLError) {
         LOG_INFO("Closing due to a GL error...");
+
     } else {
         LOG_INFO("Closing...");
     }

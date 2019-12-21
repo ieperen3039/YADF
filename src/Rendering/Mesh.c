@@ -9,11 +9,12 @@
 
 #define VERTEX_LOCATION 0
 #define NORMAL_LOCATION 1
+#define MATERIAL_LOCATION 2
 
 struct _Mesh {
     GLuint VAO_ID;
     GLuint num_elements;
-    GLuint VBOIndices[2]; // [position, normal]
+    GLuint VBOIndices[3]; // [position, normal]
 };
 
 typedef struct {
@@ -47,24 +48,27 @@ static inline void readFaceNormals(Face* face, List* normList, int faceNumber, f
     }
 }
 
-void createVBO(GLuint vboId, float* data, int att_index, int dimensions, int num_vertices) {
+void createVBO(GLuint vboId, void* data, int data_size, int att_index, int dimensions, int num_vertices) {
     GLsizeiptr i_size = num_vertices * dimensions * sizeof(float);
     glBindBuffer(GL_ARRAY_BUFFER, vboId);
     glBufferData(GL_ARRAY_BUFFER, i_size, data, GL_STATIC_DRAW);
-    glVertexAttribPointer(att_index, dimensions, GL_FLOAT, false, 0, 0);
+    glVertexAttribPointer(att_index, dimensions, data_size, false, 0, 0);
 }
 
-Mesh* mesh_from_arrays(float* normals, float* positions, int num_vertices) {
+Mesh* mesh_from_arrays(float* normals, float* positions, int* materials, int num_vertices) {
     Mesh* mesh = malloc(sizeof(Mesh));
     glGenVertexArrays(1, &mesh->VAO_ID);
     glBindVertexArray(mesh->VAO_ID);
-    glGenBuffers(2, mesh->VBOIndices);
+    glGenBuffers(3, mesh->VBOIndices);
 
     // Position VBO
-    createVBO(mesh->VBOIndices[0], positions, VERTEX_LOCATION, 3, num_vertices);
+    createVBO(mesh->VBOIndices[0], positions, GL_FLOAT, VERTEX_LOCATION, 3, num_vertices);
 
     // Vertex normals VBO
-    createVBO(mesh->VBOIndices[1], normals, NORMAL_LOCATION, 3, num_vertices);
+    createVBO(mesh->VBOIndices[1], normals, GL_FLOAT, NORMAL_LOCATION, 3, num_vertices);
+
+    // Material index VBO
+    createVBO(mesh->VBOIndices[2], materials, GL_INT, MATERIAL_LOCATION, 1, num_vertices);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
@@ -84,7 +88,7 @@ Mesh* mesh_from_file(const char* file_name) {
     List* vertices = list_new(sizeof(Vector3f), 16);
     List* normals = list_new(sizeof(Vector3f), 16);
     List* faces = list_new(sizeof(Face), 16);
-//    List* colors = list_new(sizeof(Vector3f), 16);
+    List* colors = list_new(sizeof(Vector3f), 16);
 
     // write to lists
     char line[128];
@@ -145,6 +149,8 @@ Mesh* mesh_from_file(const char* file_name) {
 
     float posArr[num_vertices * 3];
     float normArr[num_vertices * 3];
+    int matArr[num_vertices];
+    memset(matArr, 0, sizeof(matArr));
 
     // write to arrays
     for (int i = 0; i < list_get_size(faces); ++i) {
@@ -153,27 +159,28 @@ Mesh* mesh_from_file(const char* file_name) {
         readFaceNormals(face, normals, i, normArr);
     }
 
-    return mesh_from_arrays(normArr, posArr, num_vertices);
+    return mesh_from_arrays(normArr, posArr, NULL, num_vertices);
 }
 
 void mesh_render(Mesh* mesh) {
     glBindVertexArray(mesh->VAO_ID);
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(2);
 
     glDrawArrays(GL_TRIANGLES, 0, mesh->num_elements);
 
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
+    glDisableVertexAttribArray(2);
     glBindVertexArray(0);
 }
 
 void mesh_free(Mesh* mesh) {
-    glDisableVertexAttribArray(0);
     // Delete the VBOs
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    glDeleteBuffers(2, mesh->VBOIndices);
+    glDeleteBuffers(3, mesh->VBOIndices);
 
     // Delete the VAO
     glBindVertexArray(0);
