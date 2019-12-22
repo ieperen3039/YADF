@@ -4,6 +4,9 @@
 
 #include "Camera.h"
 
+#include "../DataStructures/Vector3f.h"
+#include "../DataStructures/Matrix4f.h"
+
 struct _Camera {
     Vector3f focus;
     float zoom;
@@ -23,8 +26,8 @@ float camera_get_view_width(Camera* cam) {
 }
 
 void camera_set_perspective(Camera* cam, float angle, float zoom) {
-    cam->theta = angle;
-    cam->zoom = zoom;
+    if (angle > 0) cam->theta = angle;
+    if (zoom > 0) cam->zoom = zoom;
 }
 
 void camera_set_focus(Camera* cam, Vector3fc* focus) {

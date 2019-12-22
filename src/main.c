@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
     }
     int window_width = 800;
     int window_height = 600;
-    GLFWwindow* window = glfwCreateWindow(window_width, window_height, "View", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(window_width, window_height, "Yet Another Dwarf Fortress", NULL, NULL);
 
     if (!window) {
         LOG_ERROR("Failed to create window");

@@ -15,15 +15,12 @@
 static void render_frame(Phongshader* shader, World* world, Camera* camera, float aspect_ratio) {
     static float cam_angle = 0;
     cam_angle += 0.01f;
-    camera_set_perspective(camera, cam_angle, 0.05f);
+    camera_set_perspective(camera, cam_angle, -1);
     Vector3f eye = camera_get_eye(camera);
-    char str[64];
-    vector_to_string(&eye, str, 64);
-    LOG_INFO(str);
     phong_bind(shader, &eye);
-    
+
     float w = camera_get_view_width(camera);
-    Matrix4f viewProjection = matrix_get_ortho_projection(w, w / aspect_ratio, -100, 100);
+    Matrix4f viewProjection = matrix_get_ortho_projection(w, w / aspect_ratio, -w, w);
     Matrix4f viewTransform = camera_get_transform(camera);
     matrix_mul(&viewProjection, &viewTransform, &viewProjection);
     phong_set_view_projection_matrix(shader, &viewProjection);

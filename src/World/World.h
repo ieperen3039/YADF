@@ -14,13 +14,20 @@
 #define CHUNK_COORD_BITS 4
 #define CHUNK_LENGTH (1 << CHUNK_COORD_BITS)
 
-typedef struct { // initialized as zero
-    // items on this tile
-    List item_ptrs;
-    // true iff light may pass
-    bool isOpaque;
-    // material of the tile
-    enum Material material;
+typedef struct {
+    struct {
+        // items on this tile
+        List item_ptrs;
+        // true iff light may pass
+        bool is_opaque;
+        // material of the tile
+        enum Material material;
+        // temperature of the material
+        float temperature; // in Kelvins
+    } state;
+    struct {
+
+    } update;
 } WorldTile;
 
 typedef struct _WorldQuadrant WorldQuadrant;
@@ -38,20 +45,13 @@ typedef void(*TileFunction)(WorldTile, int x, int y, int z);
 World* world_new(int world_min_size);
 
 /**
- * gets a specific tile. Initializes a chunk if it does not exist yet
- * @param coord world coordinate
- * @return a specific tile
- */
-WorldTile* world_get_tile(World* world, Vector3i coord);
-
-/**
  * given a nearby chunk, returns the tile on the given position.
  * This is likely to be faster than {@link world_get_tile} iff pos is indeed close to the given chunk
  * @param chunk a chunk, possibly containing the given pos, otherwise close to the given chunk
  * @param pos the coordinate of the requested tile
  * @return the tile on the given coordinate, or NULL if this one is in an unloaded chunk.
  */
-PURE WorldTile* world_get_tile_from_chunk(WorldChunk* chunk, Vector3i coordinate);
+PURE WorldTile* world_get_tile_from_chunk(WorldChunk* chunk, Vector3i coord);
 
 /**
  * executes the given action for every tile at the given layer in the given chunk
@@ -73,14 +73,22 @@ typedef struct {
 
 WorldTileData world_tile_iterator_next(WorldTileIterator* itr);
 
+bool world_tile_iterator_has_next(WorldTileIterator* itr);
+
 typedef struct {
-    WorldQuadrant* root;
-    int index;
-    int world_depth;
+    WorldQuadrant* targetQuad;
+    BoundingBox bounds;
+    Vector3i focus;
 } WorldChunkIterator;
 
-WorldChunkIterator world_get_chunk_iterator(World* world);;
+/**
+ * creates an iterator of at least the chunks that include the coordinates of the bounding box
+ */
+WorldChunkIterator world_get_chunk_iterator(World* world, BoundingBox box);
 
+/** returns the next chunk. Returns NULL if the chunk is not initialized */
 WorldChunk* world_chunk_iterator_next(WorldChunkIterator* itr);
+
+bool world_chunk_iterator_has_next(WorldChunkIterator* itr);
 
 #endif //YADF2_WORLD_H

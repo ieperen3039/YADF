@@ -18,13 +18,24 @@ typedef struct {
 } Vector3f;
 typedef const Vector3f Vector3fc;
 
+// a 3-element coordinate
 typedef struct {
     int x, y, z;
 } Vector3i;
 typedef const Vector3i Vector3ic;
 
+// a 4-element immutable color
 typedef struct {
     const float r, g, b, a;
 } Color4f;
+
+typedef struct {
+    int xMin;
+    int xMax;
+    int yMin;
+    int yMax;
+    int zMin;
+    int zMax;
+} BoundingBox;
 
 #endif //YADF2_STRUCTS_H

@@ -6,6 +6,7 @@
 #define YADF_MATERIALS_H
 
 enum Material {
+    AIR, // nothing
     BASALT,
     GRANITE,
     DIORITE,
