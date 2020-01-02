@@ -29,13 +29,18 @@ typedef struct {
     const float r, g, b, a;
 } Color4f;
 
-typedef struct {
-    int xMin;
-    int xMax;
-    int yMin;
-    int yMax;
-    int zMin;
-    int zMax;
-} BoundingBox;
+static const Color4f COLOR_BLACK = {0, 0, 0, 1};
+static const Color4f COLOR_WHITE = {1, 1, 1, 1};
+static const Color4f COLOR_GRAY = {0.5f, 0.5f, 0.5f, 1};
+
+typedef int UpdateCycle;
+
+//struct _World;
+//typedef struct {
+//    struct _World* world;
+//
+//    UpdateCycle time;
+//    char cycles_per_second;
+//} Game;
 
 #endif //YADF2_STRUCTS_H

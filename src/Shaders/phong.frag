@@ -1,5 +1,5 @@
 #version 130
-#pragma optionNV(unroll all)
+//#pragma optionNV(unroll all)
 
 struct Light {
     vec4 mPosition;

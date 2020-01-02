@@ -108,8 +108,8 @@ float vector_length(Vector3fc* vec);
  * @code
  * Vector4f vec;
  * int length = vector_to_string(vec, NULL, 0);
- * char str[length + 1];
- * vector_to_string(vec, str, length + 1);
+ * char str[length];
+ * vector_to_string(vec, str, length);
  * // str contains [vec\0]
  * @endcode
  *

@@ -22,7 +22,7 @@ typedef struct {
     float reflectance;
 } MaterialProperties;
 
-static const MaterialProperties material_properties_default = {
+static const MaterialProperties MATERIAL_PROPERTIES_DEFAULT = {
         {0.8, 0.8, 0.8, 1.0},
         {1, 1, 1, 1},
         20,

@@ -6,15 +6,18 @@
 
 #include <stdio.h>
 #include <errno.h>
+#include <io.h>
 #include "global.h"
 
 /// reads the contents of the given file into a char[]. If strlen is not NULL, the length of the returned char[] is stored there.
 static char* readFile(char* filename, int* strlen) {
     FILE* fp;
 
+    mkdir("here");
+
     fp = fopen(filename, "r");
     if (fp == NULL) {
-        LOG_ERROR_F("Could not open file %s", strerror(errno));
+        LOG_ERROR_F("Could not open file: %s", strerror(errno));
         return NULL;
     }
 
@@ -44,7 +47,15 @@ static char* readFile(char* filename, int* strlen) {
     return buffer;
 }
 
-#ifndef __linux__
+PURE static inline int min_i(int a, int b) {
+    return a > b ? b : a;
+}
+
+PURE static inline int max_i(int a, int b) {
+    return a > b ? a : b;
+}
+
+#ifndef strtok_r
 
 /*
 * public domain strtok_r() by Charlie Gordon

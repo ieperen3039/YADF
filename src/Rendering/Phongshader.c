@@ -7,15 +7,15 @@
 #include "Shader.h"
 #include "../Tools.h"
 #include "../DataStructures/Matrix4f.h"
-#include "../Materials.h"
+#include "../World/Materials.h"
 
 static const Vector3fc AMBIENT_LIGHT = {0.15f, 0.15f, 0.15f};
 
 struct _Phongshader {
     ShaderID ID;
-    GLuint modelMatrix; // matrix4f
     GLuint viewProjectionMatrix; // matrix4f
-    GLuint normalMatrix; // matrix3f
+    GLuint origin; // vec3f
+    GLuint rotation; // byte
     GLuint cameraPosition; // vec3f
     GLuint ambientLight; // vec3f
 
@@ -25,7 +25,7 @@ struct _Phongshader {
         GLuint mPosition;
         GLuint intensity;
     } lights[PHONGSHADER_MAX_NUM_LIGHTS];
-    
+
     struct SMaterial {
         GLuint diffuse;
         GLuint specular;
@@ -43,9 +43,9 @@ Phongshader* phong_create() {
 
     Phongshader* p = malloc(sizeof(Phongshader));
     p->ID = shader;
-    p->modelMatrix = glGetUniformLocation(shader, "modelMatrix");
-    p->normalMatrix = glGetUniformLocation(shader, "normalMatrix");
     p->viewProjectionMatrix = glGetUniformLocation(shader, "viewProjectionMatrix");
+    p->origin = glGetUniformLocation(shader, "origin");
+    p->rotation = glGetUniformLocation(shader, "rotation");
     p->ambientLight = glGetUniformLocation(shader, "ambientLight");
     p->cameraPosition = glGetUniformLocation(shader, "cameraPosition");
 
@@ -61,7 +61,7 @@ Phongshader* phong_create() {
         strcpy(field, ".intensity");
         p->lights[i].intensity = glGetUniformLocation(shader, uniform_name);
     }
-    
+
     for (int i = 0; i < PHONGSHADER_MAX_NUM_MATERIALS; ++i) {
         char uniform_name[30];
         int curr = snprintf(uniform_name, 17, "materials[%d]", i);
@@ -118,13 +118,8 @@ void phong_set_material(Phongshader* shader, int index, MaterialProperties mats)
     phong_set_material_a(shader, index, mats.diffuse, mats.specular, mats.reflectance);
 }
 
-void phong_set_model_matrix(Phongshader* shader, Matrix4f* matrix) {
-    glUniformMatrix4fv(shader->modelMatrix, 1, false, matrix_as_array(matrix));
-    Matrix4f normal_mat;
-    matrix_get_normal(matrix, &normal_mat);
-    float normal_array[9];
-    matrix_get_upper_left(&normal_mat, normal_array);
-    glUniformMatrix3fv(shader->normalMatrix, 1, false, normal_array);
+void phong_set_tile_position(Phongshader* shader, Vector3i position) {
+    glUniform3f(shader->origin, position.x, position.y, position.z);
 }
 
 void phong_set_view_projection_matrix(Phongshader* shader, Matrix4f* matrix) {
@@ -137,3 +132,7 @@ void phong_free(Phongshader* shader) {
 }
 
 GLuint phong_id(Phongshader* shader) { return shader->ID; }
+
+void phong_set_tile_rotation(Phongshader* shader, char rotation) {
+    glUniform1i(shader->rotation, rotation);
+}

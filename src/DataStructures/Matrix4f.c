@@ -338,6 +338,207 @@ void matrix_translate(Matrix4fc* this, Vector3fc* translation, Matrix4f* dest) {
     dest->properties &= ~(PROPERTY_PERSPECTIVE | PROPERTY_IDENTITY);
 }
 
+void matrix_set_translation(Matrix4f* this, Vector3f translation) {
+    this->m[3][0] = translation.x;
+    this->m[3][1] = translation.y;
+    this->m[3][2] = translation.z;
+    this->properties &= ~(PROPERTY_PERSPECTIVE | PROPERTY_IDENTITY);
+}
+
 bool matrix_equals(Matrix4f* one, Matrix4f* two) {
     return memcmp(one->m, two->m, sizeof(one->m)) == 0;
+}
+
+void matrix_get_upper_left(Matrix4f* source, float* dest) {
+    int i = 0;
+    for (int u = 0; u < 3; ++u) {
+        for (int v = 0; v < 3; ++v) {
+            dest[i++] = source->m[u][v];
+        }
+    }
+}
+
+void matrix_scale(Matrix4fc* this, float scale, Matrix4f* dest) {
+    if (this != dest) {
+        matrix_copy_to(this, dest);
+    }
+    dest->m[0][0] = this->m[0][0] * scale;
+    dest->m[1][1] = this->m[1][1] * scale;
+    dest->m[2][2] = this->m[2][2] * scale;
+    dest->properties &= ~(PROPERTY_IDENTITY);
+}
+
+void matrix_scale_3f(Matrix4fc* this, Vector3fc* scale, Matrix4f* dest) {
+    if (this != dest) {
+        matrix_copy_to(this, dest);
+    }
+    dest->m[0][0] = this->m[0][0] * scale->x;
+    dest->m[1][1] = this->m[1][1] * scale->y;
+    dest->m[2][2] = this->m[2][2] * scale->z;
+    dest->properties &= ~(PROPERTY_IDENTITY | PROPERTY_ORTHONORMAL | PROPERTY_TRANSLATION);
+}
+
+void invertPerspective(Matrix4fc* this, Matrix4f* dest) {
+    float m00 = this->m[0][0];
+    float m11 = this->m[1][1];
+    float m22 = this->m[2][2];
+    float m23 = this->m[2][3];
+    float m32 = this->m[3][2];
+    float a = 1.0f / (m00 * m11);
+    float l = -1.0f / (m23 * m32);
+    *dest = (Matrix4f) {
+            .m = {
+                    {m11 * a, 0,       0,        0},
+                    {0,       m00 * a, 0,        0},
+                    {0,       0,       0,        -m23 * l},
+                    {0,       0,       -m32 * l, m22 * l},
+            }, .properties = 0
+    };
+}
+
+void invertOrthonormal(Matrix4fc* this, Matrix4f* dest) {
+    float nm30 = -(this->m[0][0] * this->m[3][0] + this->m[0][1] * this->m[3][1] + this->m[0][2] * this->m[3][2]);
+    float nm31 = -(this->m[1][0] * this->m[3][0] + this->m[1][1] * this->m[3][1] + this->m[1][2] * this->m[3][2]);
+    float nm32 = -(this->m[2][0] * this->m[3][0] + this->m[2][1] * this->m[3][1] + this->m[2][2] * this->m[3][2]);
+    float t01 = this->m[0][1];
+    float t02 = this->m[0][2];
+    float t12 = this->m[1][2];
+    dest->m[0][0] = (this->m[0][0]);
+    dest->m[0][1] = (this->m[1][0]);
+    dest->m[0][2] = (this->m[2][0]);
+    dest->m[0][3] = (0.0f);
+    dest->m[1][0] = (t01);
+    dest->m[1][1] = (this->m[1][1]);
+    dest->m[1][2] = (this->m[2][1]);
+    dest->m[1][3] = (0.0f);
+    dest->m[2][0] = (t02);
+    dest->m[2][1] = (t12);
+    dest->m[2][2] = (this->m[2][2]);
+    dest->m[2][3] = (0.0f);
+    dest->m[3][0] = (nm30);
+    dest->m[3][1] = (nm31);
+    dest->m[3][2] = (nm32);
+    dest->m[3][3] = (1.0f);
+    dest->properties = (PROPERTY_AFFINE | PROPERTY_ORTHONORMAL);
+}
+
+void invertAffine(Matrix4fc* this, Matrix4f* dest) {
+    float m11m00 = this->m[0][0] * this->m[1][1];
+    float m10m01 = this->m[0][1] * this->m[1][0];
+    float m10m02 = this->m[0][2] * this->m[1][0];
+    float m12m00 = this->m[0][0] * this->m[1][2];
+    float m12m01 = this->m[0][1] * this->m[1][2];
+    float m11m02 = this->m[0][2] * this->m[1][1];
+    float det =
+            (m11m00 - m10m01) * this->m[2][2] + (m10m02 - m12m00) * this->m[2][1] + (m12m01 - m11m02) * this->m[2][0];
+    float s = 1.0f / det;
+    float m10m22 = this->m[1][0] * this->m[2][2];
+    float m10m21 = this->m[1][0] * this->m[2][1];
+    float m11m22 = this->m[1][1] * this->m[2][2];
+    float m11m20 = this->m[1][1] * this->m[2][0];
+    float m12m21 = this->m[1][2] * this->m[2][1];
+    float m12m20 = this->m[1][2] * this->m[2][0];
+    float m20m02 = this->m[2][0] * this->m[0][2];
+    float m20m01 = this->m[2][0] * this->m[0][1];
+    float m21m02 = this->m[2][1] * this->m[0][2];
+    float m21m00 = this->m[2][1] * this->m[0][0];
+    float m22m01 = this->m[2][2] * this->m[0][1];
+    float m22m00 = this->m[2][2] * this->m[0][0];
+    float nm00 = (m11m22 - m12m21) * s;
+    float nm01 = (m21m02 - m22m01) * s;
+    float nm02 = (m12m01 - m11m02) * s;
+    float nm10 = (m12m20 - m10m22) * s;
+    float nm11 = (m22m00 - m20m02) * s;
+    float nm12 = (m10m02 - m12m00) * s;
+    float nm20 = (m10m21 - m11m20) * s;
+    float nm21 = (m20m01 - m21m00) * s;
+    float nm22 = (m11m00 - m10m01) * s;
+    float nm30 = (m10m22 * this->m[3][1] - m10m21 * this->m[3][2] + m11m20 * this->m[3][2] - m11m22 * this->m[3][0] +
+                  m12m21 * this->m[3][0] - m12m20 * this->m[3][1]) * s;
+    float nm31 = (m20m02 * this->m[3][1] - m20m01 * this->m[3][2] + m21m00 * this->m[3][2] - m21m02 * this->m[3][0] +
+                  m22m01 * this->m[3][0] - m22m00 * this->m[3][1]) * s;
+    float nm32 = (m11m02 * this->m[3][0] - m12m01 * this->m[3][0] + m12m00 * this->m[3][1] - m10m02 * this->m[3][1] +
+                  m10m01 * this->m[3][2] - m11m00 * this->m[3][2]) * s;
+    dest->m[0][0] = (nm00);
+    dest->m[0][1] = (nm01);
+    dest->m[0][2] = (nm02);
+    dest->m[0][3] = (0.0f);
+    dest->m[1][0] = (nm10);
+    dest->m[1][1] = (nm11);
+    dest->m[1][2] = (nm12);
+    dest->m[1][3] = (0.0f);
+    dest->m[2][0] = (nm20);
+    dest->m[2][1] = (nm21);
+    dest->m[2][2] = (nm22);
+    dest->m[2][3] = (0.0f);
+    dest->m[3][0] = (nm30);
+    dest->m[3][1] = (nm31);
+    dest->m[3][2] = (nm32);
+    dest->m[3][3] = (1.0f);
+    dest->properties = (PROPERTY_AFFINE);
+}
+
+
+void invertGeneric(Matrix4fc* this, Matrix4f* dest) {
+    float a = this->m[0][0] * this->m[1][1] - this->m[0][1] * this->m[1][0];
+    float b = this->m[0][0] * this->m[1][2] - this->m[0][2] * this->m[1][0];
+    float c = this->m[0][0] * this->m[1][3] - this->m[0][3] * this->m[1][0];
+    float d = this->m[0][1] * this->m[1][2] - this->m[0][2] * this->m[1][1];
+    float e = this->m[0][1] * this->m[1][3] - this->m[0][3] * this->m[1][1];
+    float f = this->m[0][2] * this->m[1][3] - this->m[0][3] * this->m[1][2];
+    float g = this->m[2][0] * this->m[3][1] - this->m[2][1] * this->m[3][0];
+    float h = this->m[2][0] * this->m[3][2] - this->m[2][2] * this->m[3][0];
+    float i = this->m[2][0] * this->m[3][3] - this->m[2][3] * this->m[3][0];
+    float j = this->m[2][1] * this->m[3][2] - this->m[2][2] * this->m[3][1];
+    float k = this->m[2][1] * this->m[3][3] - this->m[2][3] * this->m[3][1];
+    float l = this->m[2][2] * this->m[3][3] - this->m[2][3] * this->m[3][2];
+    float det = a * l - b * k + c * j + d * i - e * h + f * g;
+    det = 1.0f / det;
+    float nm00 = (this->m[1][1] * l - this->m[1][2] * k + this->m[1][3] * j) * det;
+    float nm01 = (-this->m[0][1] * l + this->m[0][2] * k - this->m[0][3] * j) * det;
+    float nm02 = (this->m[3][1] * f - this->m[3][2] * e + this->m[3][3] * d) * det;
+    float nm03 = (-this->m[2][1] * f + this->m[2][2] * e - this->m[2][3] * d) * det;
+    float nm10 = (-this->m[1][0] * l + this->m[1][2] * i - this->m[1][3] * h) * det;
+    float nm11 = (this->m[0][0] * l - this->m[0][2] * i + this->m[0][3] * h) * det;
+    float nm12 = (-this->m[3][0] * f + this->m[3][2] * c - this->m[3][3] * b) * det;
+    float nm13 = (this->m[2][0] * f - this->m[2][2] * c + this->m[2][3] * b) * det;
+    float nm20 = (this->m[1][0] * k - this->m[1][1] * i + this->m[1][3] * g) * det;
+    float nm21 = (-this->m[0][0] * k + this->m[0][1] * i - this->m[0][3] * g) * det;
+    float nm22 = (this->m[3][0] * e - this->m[3][1] * c + this->m[3][3] * a) * det;
+    float nm23 = (-this->m[2][0] * e + this->m[2][1] * c - this->m[2][3] * a) * det;
+    float nm30 = (-this->m[1][0] * j + this->m[1][1] * h - this->m[1][2] * g) * det;
+    float nm31 = (this->m[0][0] * j - this->m[0][1] * h + this->m[0][2] * g) * det;
+    float nm32 = (-this->m[3][0] * d + this->m[3][1] * b - this->m[3][2] * a) * det;
+    float nm33 = (this->m[2][0] * d - this->m[2][1] * b + this->m[2][2] * a) * det;
+    dest->m[0][0] = (nm00);
+    dest->m[0][1] = (nm01);
+    dest->m[0][2] = (nm02);
+    dest->m[0][3] = (nm03);
+    dest->m[1][0] = (nm10);
+    dest->m[1][1] = (nm11);
+    dest->m[1][2] = (nm12);
+    dest->m[1][3] = (nm13);
+    dest->m[2][0] = (nm20);
+    dest->m[2][1] = (nm21);
+    dest->m[2][2] = (nm22);
+    dest->m[2][3] = (nm23);
+    dest->m[3][0] = (nm30);
+    dest->m[3][1] = (nm31);
+    dest->m[3][2] = (nm32);
+    dest->m[3][3] = (nm33);
+    dest->properties = 0;
+}
+
+void matrix_invert(Matrix4fc* this, Matrix4f* dest) {
+    if ((this->properties & PROPERTY_IDENTITY) != 0) {
+        matrix_set_identity(dest);
+    } else if ((this->properties & PROPERTY_ORTHONORMAL) != 0) {
+        invertOrthonormal(this, dest);
+    } else if ((this->properties & PROPERTY_AFFINE) != 0) {
+        invertAffine(this, dest);
+    } else if ((this->properties & PROPERTY_PERSPECTIVE) != 0) {
+        invertPerspective(this, dest);
+    } else {
+        invertGeneric(this, dest);
+    }
 }

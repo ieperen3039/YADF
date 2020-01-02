@@ -8,7 +8,7 @@
 #include <global.h>
 #include <GL/glew.h>
 #include "../DataStructures/Matrix4f.h"
-#include "../Materials.h"
+#include "../World/Materials.h"
 
 #define PHONGSHADER_MAX_NUM_LIGHTS 16
 #define PHONGSHADER_MAX_NUM_MATERIALS 16
@@ -26,7 +26,9 @@ void phong_set_material(Phongshader* shader, int index, MaterialProperties mats)
 
 void phong_set_material_a(Phongshader* shader, int index, Color4f diffuse, Color4f specular, float reflectance);
 
-void phong_set_model_matrix(Phongshader* shader, Matrix4f* matrix);
+void phong_set_tile_position(Phongshader* shader, Vector3i position);
+
+void phong_set_tile_rotation(Phongshader* shader, char rotation);
 
 void phong_set_view_projection_matrix(Phongshader* shader, Matrix4f* matrix);
 

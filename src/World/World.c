@@ -5,6 +5,8 @@
 #include <assert.h>
 #include "World.h"
 
+struct _Entity;
+
 struct _WorldQuadrant {
     Vector3i middle_pos; // coordinate of center, as the negative corner of tile (0, 0, 0))
     union { // if (height == 0) use leaves else use childs
@@ -15,24 +17,29 @@ struct _WorldQuadrant {
     unsigned char height;
 };
 
+struct _World {
+    WorldQuadrant* chunks;
+    AllocatorSM* quad_allocator;
+    unsigned char depth;
+
+    List entities_to_update;
+};
+
 struct _WorldChunk {
     union {
         WorldTile tiles[CHUNK_LENGTH * CHUNK_LENGTH * CHUNK_LENGTH];
         WorldTile grid[CHUNK_LENGTH][CHUNK_LENGTH][CHUNK_LENGTH];
     };
+    // parent quadrant of this chunk
     WorldQuadrant* parent;
+    // position of grid[0][0][0]
     Vector3i zero_pos;
 };
 
-struct _World {
-    WorldQuadrant* chunks;
-    unsigned char depth;
-    AllocatorSM* quad_allocator;
-};
-
-static WorldQuadrant* new_quadrant(AllocatorSM* allocator, WorldQuadrant* parent, int index) {
+WorldQuadrant* new_quadrant(AllocatorSM* allocator, WorldQuadrant* parent, int index) {
     WorldQuadrant* elt = allocator_sm_alloc(allocator);
 
+    parent->childs[index] = elt;
     elt->parent = parent;
     elt->height = parent->height - 1;
 
@@ -47,6 +54,7 @@ static WorldQuadrant* new_quadrant(AllocatorSM* allocator, WorldQuadrant* parent
     if ((index & 2) == 0) middle.y -= quad_reach;
     if ((index & 4) == 0) middle.z -= quad_reach;
     elt->middle_pos = middle;
+
     // set leaves on NULL
     for (int i = 0; i < 8; ++i) {
         elt->leaves[i] = NULL;
@@ -54,12 +62,11 @@ static WorldQuadrant* new_quadrant(AllocatorSM* allocator, WorldQuadrant* parent
     return elt;
 }
 
-static void init_quadrant_leaf(WorldQuadrant* quadrant) {
+void init_quadrant_leaf(WorldQuadrant* quadrant, const WorldTile initial_tile) {
     WorldChunk* chunks = malloc(8 * sizeof(WorldChunk));
-    size_t offset = sizeof(WorldChunk);
 
     for (int i = 0; i < 8; ++i) {
-        WorldChunk* chunk_section = (WorldChunk*) chunks + i * offset;
+        WorldChunk* chunk_section = (WorldChunk*) chunks + i;
 
         chunk_section->parent = quadrant;
         Vector3i pos = quadrant->middle_pos;
@@ -67,6 +74,14 @@ static void init_quadrant_leaf(WorldQuadrant* quadrant) {
         if ((i & 2) == 0) pos.y -= CHUNK_LENGTH;
         if ((i & 4) == 0) pos.z -= CHUNK_LENGTH;
         chunk_section->zero_pos = pos;
+
+        for (int j = 0; j < (CHUNK_LENGTH * CHUNK_LENGTH * CHUNK_LENGTH); ++j) {
+            chunk_section->tiles[j] = initial_tile;
+            // we are not going to copy the entities, so clear the list to be sure
+            if (list_get_size(&initial_tile.entity_ptrs) > 0) {
+                list_clear(&chunk_section->tiles[j].entity_ptrs);
+            }
+        }
 
         quadrant->leaves[i] = chunk_section;
     }
@@ -87,44 +102,49 @@ PURE static inline int get_quad_index(WorldQuadrant* parent, Vector3i coord) {
     assert(parent != NULL);
     Vector3i o = parent->middle_pos;
     int index = 0;
-    if (coord.x > o.x) index &= 1;
-    if (coord.y > o.y) index &= 2;
-    if (coord.z > o.z) index &= 4;
+    if (coord.x > o.x) index |= 1;
+    if (coord.y > o.y) index |= 2;
+    if (coord.z > o.z) index |= 4;
     return index;
-}
-
-static WorldChunk* get_chunk_under_quad(WorldQuadrant* quadrant, Vector3i coord) {
-    while (quadrant->height > 0) {
-        int quad_ind = get_quad_index(quadrant, coord);
-        WorldQuadrant* nextQuad = quadrant->childs[quad_ind];
-        if (nextQuad == NULL) {
-            return NULL;
-        }
-        quadrant = nextQuad;
-    }
-
-    return quadrant->leaves[get_quad_index(quadrant, coord)];
 }
 
 /// if quad_allocator == NULL and the quadrant does not exist, return NULL
 WorldQuadrant* get_quad_under_quad(WorldQuadrant* quadrant, Vector3i tgtCoord, AllocatorSM* allocator) {
     assert(quadrant != NULL);
+    assert(quad_contains(quadrant, tgtCoord));
 
     while (quadrant->height > 0) {
         int quad_ind = get_quad_index(quadrant, tgtCoord);
         WorldQuadrant* nextQuad = quadrant->childs[quad_ind];
+
         if (nextQuad == NULL) {
             if (allocator == NULL) return NULL;
-            // focus has updated, but chunk is undefined. Return NULL.
             quadrant = new_quadrant(allocator, quadrant, quad_ind);
         } else {
             quadrant = nextQuad;
         }
     }
+
     return quadrant;
 }
 
 /// if quad_allocator == NULL and the quadrant does not exist, return NULL
+static WorldChunk* get_chunk_under_quad(WorldQuadrant* quadrant, Vector3i coord, AllocatorSM* allocator) {
+    assert(quad_contains(quadrant, coord));
+    quadrant = get_quad_under_quad(quadrant, coord, allocator);
+
+    return quadrant->leaves[get_quad_index(quadrant, coord)];
+}
+
+/**
+ * returns the leaf quadrant containing the given coordinate.
+ * Searching starts from the given quadrant.
+ * if quad_allocator == NULL and the quadrant does not exist, return NULL
+ * @param quadrant
+ * @param tgtCoord
+ * @param quad_allocator
+ * @return the leaf quadrant containing the coordinate, or NULL if it can't be found nor made
+ */
 WorldQuadrant* get_quad_from_quad(WorldQuadrant* quadrant, Vector3i tgtCoord, AllocatorSM* quad_allocator) {
     assert(quadrant != NULL);
 
@@ -132,10 +152,11 @@ WorldQuadrant* get_quad_from_quad(WorldQuadrant* quadrant, Vector3i tgtCoord, Al
         quadrant = quadrant->parent;
     }
 
+    if (quadrant == NULL) return NULL;
     return get_quad_under_quad(quadrant, tgtCoord, quad_allocator);
 }
 
-WorldTileIterator world_get_tile_iterator(WorldChunk* chunk) {
+PURE WorldTileIterator chunk_get_tile_iterator(WorldChunk* chunk) {
     assert(chunk != NULL);
     return (WorldTileIterator) {
             chunk->zero_pos, chunk->tiles, 0
@@ -146,32 +167,37 @@ WorldChunkIterator world_get_chunk_iterator(World* world, BoundingBox box) {
     return (WorldChunkIterator) {world->chunks, box, (Vector3i) {box.xMin, box.yMin, box.zMin}};
 }
 
-WorldChunk* world_chunk_iterator_next(WorldChunkIterator* itr) {
-    Vector3i tgtCoord = itr->focus;
+WorldChunkData world_chunk_iterator_next(WorldChunkIterator* itr) {
+    Vector3i zeroPos = itr->focus;
+    zeroPos.x -= (zeroPos.x % CHUNK_LENGTH);
+    zeroPos.y -= (zeroPos.y % CHUNK_LENGTH);
+    zeroPos.z -= (zeroPos.z % CHUNK_LENGTH);
 
     // update focus
     itr->focus.x += CHUNK_LENGTH;
     if (itr->focus.x > itr->bounds.xMax) {
         itr->focus.x = itr->bounds.xMin;
         itr->focus.y += CHUNK_LENGTH;
-        if (++itr->focus.y > itr->bounds.yMax) {
+        if (itr->focus.y > itr->bounds.yMax) {
             itr->focus.y = itr->bounds.yMin;
             itr->focus.z += CHUNK_LENGTH;
         }
     }
 
-    itr->targetQuad = get_quad_from_quad(itr->targetQuad, tgtCoord, NULL);
-    if (itr->targetQuad == NULL) return NULL;
+    itr->targetQuad = get_quad_from_quad(itr->targetQuad, zeroPos, NULL);
+    if (itr->targetQuad == NULL) return (WorldChunkData) {NULL, zeroPos};
 
-    int chunk_index = get_quad_index(itr->targetQuad, tgtCoord);
-    return itr->targetQuad->leaves[chunk_index];
+    int chunk_index = get_quad_index(itr->targetQuad, zeroPos);
+    WorldChunk* pChunk = itr->targetQuad->leaves[chunk_index];
+
+    return (WorldChunkData) {pChunk, zeroPos}; // may be NULL
 }
 
-bool world_chunk_iterator_has_next(WorldChunkIterator* itr) {
-    return itr->focus.z > itr->bounds.zMax;
+PURE bool world_chunk_iterator_has_next(WorldChunkIterator* itr) {
+    return itr->focus.z < itr->bounds.zMax;
 }
 
-WorldTileData world_tile_iterator_next(WorldTileIterator* itr) {
+WorldTileData chunk_tile_iterator_next(WorldTileIterator* itr) {
     int x = itr->chunk_pos.x + itr->index % CHUNK_LENGTH;
     int y = itr->chunk_pos.y + (itr->index % (CHUNK_LENGTH * CHUNK_LENGTH)) / CHUNK_LENGTH;
     int z = itr->chunk_pos.z + itr->index / (CHUNK_LENGTH * CHUNK_LENGTH);
@@ -182,14 +208,14 @@ WorldTileData world_tile_iterator_next(WorldTileIterator* itr) {
     };
 }
 
-bool world_tile_iterator_has_next(WorldTileIterator* itr) {
+PURE bool chunk_tile_iterator_has_next(WorldTileIterator* itr) {
     return itr->index < (CHUNK_LENGTH * CHUNK_LENGTH * CHUNK_LENGTH);
 }
 
-PURE WorldChunk* get_chunk_from_quad(WorldQuadrant* quadrant, Vector3i coord) {
+PURE WorldChunk* get_chunk_from_quad(WorldQuadrant* quadrant, Vector3i coord, AllocatorSM* allocator) {
     assert(quadrant != NULL);
     while (!quad_contains(quadrant, coord)) quadrant = quadrant->parent;
-    return get_chunk_under_quad(quadrant, coord);
+    return get_chunk_under_quad(quadrant, coord, allocator);
 }
 
 PURE WorldTile* world_get_tile_from_chunk(WorldChunk* chunk, Vector3i coord) {
@@ -202,7 +228,8 @@ PURE WorldTile* world_get_tile_from_chunk(WorldChunk* chunk, Vector3i coord) {
                         coord.z < c_zero.z + CHUNK_LENGTH;
 
     if (!contains_pos) {
-        chunk = get_chunk_from_quad(chunk->parent, coord);
+        chunk = get_chunk_from_quad(chunk->parent, coord, NULL);
+        if (chunk == NULL) return NULL;
     }
 
     return &(chunk->grid[coord.x][coord.y][coord.z]);
@@ -215,22 +242,36 @@ void world_exec_layer(WorldChunk* chunk, int layer, TileFunction action) {
     int end = begin + (CHUNK_LENGTH * CHUNK_LENGTH);
 
     for (int i = begin; i < end; i++) {
-        action(chunk->tiles[i], i % CHUNK_LENGTH, (i - begin) / CHUNK_LENGTH, layer);
+        action(&chunk->tiles[i], i % CHUNK_LENGTH, (i - begin) / CHUNK_LENGTH, layer);
     }
 }
 
-void world_initialize_area(World* world, const BoundingBox area) {
+int world_initialize_area(World* world, const BoundingBox area, const WorldTile initial_tile) {
+    int initialized_chunks = 0;
+
     WorldQuadrant* quadrant = get_quad_under_quad(
             world->chunks, (Vector3i) {area.xMin, area.yMin, area.zMin}, world->quad_allocator
     );
 
-    for (int x = area.xMin; x < area.xMax; x += CHUNK_LENGTH * 2) {
-        for (int y = area.yMin; y < area.yMax; y += CHUNK_LENGTH * 2) {
-            for (int z = area.zMin; z < area.zMax; z += CHUNK_LENGTH * 2) {
+    // extend initialisation range to include upper bounds
+    int xMax = area.xMax + (CHUNK_LENGTH * 2);
+    int yMax = area.yMax + (CHUNK_LENGTH * 2);
+    int zMax = area.zMax + (CHUNK_LENGTH * 2);
+
+    for (int x = area.xMin; x < xMax; x += CHUNK_LENGTH * 2) {
+        for (int y = area.yMin; y < yMax; y += CHUNK_LENGTH * 2) {
+            for (int z = area.zMin; z < zMax; z += CHUNK_LENGTH * 2) {
                 quadrant = get_quad_from_quad(quadrant, (Vector3i) {x, y, z}, world->quad_allocator);
+
+                if (quadrant->leaves[0] == NULL) {
+                    init_quadrant_leaf(quadrant, initial_tile);
+                    initialized_chunks += 4;
+                }
             }
         }
     }
+
+    return initialized_chunks;
 }
 
 World* world_new(int world_min_size) {
@@ -259,6 +300,42 @@ World* world_new(int world_min_size) {
 
     new_world->chunks = elt;
     new_world->depth = depth;
+    list_init(&new_world->entities_to_update, sizeof(struct _Entity*), WORLD_DEFAULT_ENTITY_LIST_CAPACITY);
+    LOG_INFO_F("Created world with %d layers", new_world->depth);
 
     return new_world;
+}
+
+void free_quad(WorldQuadrant* quad) {
+    if (quad == NULL) return;
+
+    if (quad->height == 0) {
+        free(quad->leaves); // chunks are allocated per 8
+
+    } else {
+        for (int i = 0; i < 8; ++i) {
+            free_quad(quad->childs[i]);
+        }
+    }
+
+    // quad itself is allocated in world.quad_allocator
+}
+
+void world_free(World* world) {
+    free_quad(world->chunks);
+    allocator_sm_free(world->quad_allocator);
+    free(world);
+}
+
+PURE List* world_get_entities_to_update(World* world) {
+    return &world->entities_to_update;
+}
+
+Vector3ic* chunk_get_position(WorldChunk* chunk) {
+    return &chunk->zero_pos;
+}
+
+void world_tile_init(WorldTile* base_tile, char flags) {
+    base_tile->flags = flags;
+    list_init(&base_tile->entity_ptrs, sizeof(void*), 0);
 }

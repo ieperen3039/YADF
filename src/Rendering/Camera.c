@@ -17,7 +17,7 @@ Camera* camera_new(Vector3fc* focus) {
     Camera* this = malloc(sizeof(Camera));
     this->focus = *focus; // copy
     this->theta = 1;
-    this->zoom = 0.05f;
+    this->zoom = 0.01f;
     return this;
 }
 

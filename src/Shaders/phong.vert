@@ -1,7 +1,7 @@
 #version 330
 #pragma optionNV(unroll all)
 
-layout (location = 0) in vec3 position;
+layout (location = 0) in vec3 vertexPosition;
 layout (location = 1) in vec3 vertexNormal;
 layout (location = 2) in int materialBit;
 
@@ -12,17 +12,24 @@ out vec3 mVertexPosition;
 // material of the triangle
 flat out int mMaterialBit;
 
-const int MAX_MATERIALS = 16;
-
-uniform mat4 modelMatrix;
+uniform vec3 origin;
+uniform int rotation;
 uniform mat4 viewProjectionMatrix;
-uniform mat3 normalMatrix;
+
+vec3 rotateQuarters(vec3 vector, int quarters) {
+    for (int i = 0; i < quarters; i++) {
+        float x = vector.x;
+        vector.x = -vector.y;
+        vector.y = x;
+    }
+    return vector;
+}
 
 void main() {
-    vec4 mPosition = modelMatrix * vec4(position, 1.0);
-    gl_Position = viewProjectionMatrix * mPosition;
+    mVertexPosition = rotateQuarters(vertexPosition, rotation);
+    gl_Position = viewProjectionMatrix * vec4(mVertexPosition, 1.0);
 
-    mVertexNormal = normalize(normalMatrix * vertexNormal);
-    mVertexPosition = mPosition.xyz;
+    mVertexNormal = rotateQuarters(vertexNormal, rotation);
+
     mMaterialBit = materialBit;
 }

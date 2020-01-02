@@ -11,11 +11,11 @@
 #include <stdbool.h>
 #include <global.h>
 
-#define PROPERTY_IDENTITY 0x01
-#define PROPERTY_AFFINE 0x02
-#define PROPERTY_TRANSLATION 0x04
-#define PROPERTY_ORTHONORMAL 0x08
-#define PROPERTY_PERSPECTIVE 0x10
+#define PROPERTY_IDENTITY       (1 << 0)
+#define PROPERTY_AFFINE         (1 << 1)
+#define PROPERTY_TRANSLATION    (1 << 2)
+#define PROPERTY_ORTHONORMAL    (1 << 3)
+#define PROPERTY_PERSPECTIVE    (1 << 4)
 
 /**
  * @return a new identity matrix
@@ -110,7 +110,20 @@ Vector3f* matrix_project(Matrix4f* this, float x, float y, float z, const int vi
  *  */
 void matrix_get_normal(Matrix4f* this, Matrix4f* dest);
 
+/**
+ * Translates the given matrix by the given transformation
+ * @param this
+ * @param translation
+ * @param dest
+ */
 void matrix_translate(Matrix4fc* this, Vector3fc* translation, Matrix4f* dest);
+
+/**
+ * Sets the translation of the given matrix to the given translation
+ * @param this the matrix that is changed
+ * @param translation the final translation of this matrix
+ */
+void matrix_set_translation(Matrix4f* this, Vector3f translation);
 
 /**
  * does a deep-compare of the two given matrices. This differs from (memcmp(one, two, sizeof(Matrix4f)) != 0) in that
@@ -125,14 +138,30 @@ PURE static inline float* matrix_as_array(Matrix4f* mat) {
 };
 
 /** copies the upper left area of the matrix to the given array */
-static inline void matrix_get_upper_left(Matrix4f* source, float dest[9]) {
-    int i = 0;
-    for (int u = 0; u < 3; ++u) {
-        for (int v = 0; v < 3; ++v) {
-            dest[i++] = source->m[u][v];
-        }
-    }
-}
+void matrix_get_upper_left(Matrix4f* source, float dest[9]);
+
+/**
+ * puts a scaling on this matrix. The effect is that all axes are scaled *further* by the given scaling. The w component remains unchanged
+ * @param this the matrix to scale
+ * @param scale the scaling factor
+ * @param dest the matrix to store the result
+ */
+void matrix_scale(Matrix4fc* this, float scale, Matrix4f* dest);
+
+/**
+ * puts a non-uniform scaling on this matrix. The effect is that each axis is scaled *further* by its respective factor in scale
+ * @param this the matrix to scale
+ * @param scale the scaling factors
+ * @param dest the matrix to store the result
+ */
+void matrix_scale_3f(Matrix4fc* this, Vector3fc* scale, Matrix4f* dest);
+
+/**
+ * inverts the given matrix, and stores the result in dest
+ * @param this
+ * @param dest
+ */
+void matrix_invert(Matrix4fc* this, Matrix4f* dest);
 
 /** 
  * If dest is not null and the string representation of mat is smaller than str_size,

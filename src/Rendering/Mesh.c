@@ -85,10 +85,10 @@ Mesh* mesh_from_file(const char* file_name) {
         return NULL;
     }
 
-    List* vertices = list_new(sizeof(Vector3f), 16);
-    List* normals = list_new(sizeof(Vector3f), 16);
-    List* faces = list_new(sizeof(Face), 16);
-    List* colors = list_new(sizeof(Vector3f), 16);
+    List buffer[3];
+    List* vertices = list_init(&buffer[0], sizeof(Vector3f), 16);
+    List* normals = list_init(&buffer[1], sizeof(Vector3f), 16);
+    List* faces = list_init(&buffer[2], sizeof(Face), 16);
 
     // write to lists
     char line[128];
@@ -159,7 +159,11 @@ Mesh* mesh_from_file(const char* file_name) {
         readFaceNormals(face, normals, i, normArr);
     }
 
-    return mesh_from_arrays(normArr, posArr, NULL, num_vertices);
+    list_free(vertices);
+    list_free(normals);
+    list_free(faces);
+
+    return mesh_from_arrays(normArr, posArr, matArr, num_vertices);
 }
 
 void mesh_render(Mesh* mesh) {

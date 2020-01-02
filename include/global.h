@@ -11,16 +11,29 @@
 #include <stdlib.h>
 
 typedef enum {
-    ERROR_NONE              = 0,
-    ERROR_OUT_OF_BOUNDS     = 0x0001,
-    ERROR_IO                = 0x0002
+    ERROR_NONE = 0,
+    ERROR_OUT_OF_BOUNDS = 0x0001,
+    ERROR_IO = 0x0002
 } ErrorCode;
 
+static const char* error_get_name(ErrorCode ec) {
+    switch (ec) {
+        case ERROR_NONE:
+            return "None";
+        case ERROR_OUT_OF_BOUNDS:
+            return "Out Of Bounds";
+        case ERROR_IO:
+            return "IO Error";
+        default:
+            return "(Invalid Error Code)";
+    }
+}
+
 #define LOG_INFO(msg) lprintf(stdout, __FILE__, __LINE__, msg, true)
-#define LOG_INFO_F(fmt, msg) lprintf(stdout, __FILE__, __LINE__, "", false); fprintf(stdout, fmt, msg); fprintf(stdout, "\n")
+#define LOG_INFO_F(fmt, msg...) lprintf(stdout, __FILE__, __LINE__, "", false); fprintf(stdout, fmt, msg); fprintf(stdout, "\n")
 
 #define LOG_ERROR(msg) lprintf(stderr, __FILE__, __LINE__, msg, true)
-#define LOG_ERROR_F(fmt, msg) lprintf(stderr, __FILE__, __LINE__, "", false); fprintf(stderr, fmt, msg); fprintf(stderr, "\n")
+#define LOG_ERROR_F(fmt, msg...) lprintf(stderr, __FILE__, __LINE__, "", false); fprintf(stderr, fmt, msg); fprintf(stderr, "\n")
 
 static void lprintf(FILE* out, const char* file_name, int line, const char* msg, bool newline) {
     char prefix[50];

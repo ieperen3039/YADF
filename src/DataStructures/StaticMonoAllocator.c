@@ -3,6 +3,10 @@
 //
 #include "StaticMonoAllocator.h"
 
+#ifndef ALLOCATOR_BLOCK_SIZE
+    #define ALLOCATOR_BLOCK_SIZE 64
+#endif // ALLOCATOR_BLOCK_SIZE
+
 typedef void Type; // we don't know the actual size of the Type we allocate at compile time
 
 struct _Static_Monotype_Alloctor {
@@ -14,12 +18,7 @@ struct _Static_Monotype_Alloctor {
 
 AllocatorSM* allocator_sm_new(size_t element_size) {
     AllocatorSM* alloc = malloc(sizeof(AllocatorSM));
-    int initial_elements = 4;
-    // abuse the fact that List is a complete type
-    alloc->all_blocks = (List) {
-            ._data = malloc(sizeof(Type*) * initial_elements),
-            ._size = 0, ._capacity = initial_elements, ._element_size = sizeof(Type*)
-    };
+    list_init(&alloc->all_blocks, sizeof(Type*), 4);
     alloc->elements_left = 0;
     alloc->element_size = element_size;
     return alloc;
@@ -56,7 +55,7 @@ static void* allocator_sm(void* sm_alloc, size_t size) {
 }
 
 Allocator allocator_sm_get(AllocatorSM* elt) {
-    Allocator result = {elt, allocator_sm};
+    Allocator result = {elt, allocator_sm,};
     return result;
 }
 
