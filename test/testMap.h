@@ -66,9 +66,9 @@ void test_map_compute_absent(CuTest* tc) {
     ElementMap* map = allocator_sm_alloc(alloc_map);
     map_init(map, sizeof(List));
 
-    List* list1 = map_compute_if_absent(map, 10, test_map_get_list);
-    List* list2 = map_compute_if_absent(map, 20, test_map_get_list);
-    List* list3 = map_compute_if_absent(map, 10, test_map_get_list);
+    List* list1 = map_compute_if_absent(map, 10, test_map_get_list, NULL);
+    List* list2 = map_compute_if_absent(map, 20, test_map_get_list, NULL);
+    List* list3 = map_compute_if_absent(map, 10, test_map_get_list, NULL);
 
     CuAssertPtrEquals(tc, list1, list3);
     CuAssertTrue(tc, list1 != list2);
@@ -142,6 +142,10 @@ void test_map_overload(CuTest* tc) {
 
     map_free(map);
     free(map);
+}
+
+void test_map_empty(CuTest* tc) {
+    CuAssertIntEquals(tc, map_get_size(&MAP_EMPTY), 0);
 }
 
 CuSuite* map_suite(void) {

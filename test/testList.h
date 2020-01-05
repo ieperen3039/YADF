@@ -198,7 +198,7 @@ void test_list_pack(CuTest* tc) {
     CuAssertTrue(tc, data_size_after_pack < data_size_before_pack);
 
     if (6 > list->_capacity) {
-        _list_grow(list);
+        list_grow(list);
     }
     CuAssertTrue(tc, list_get_data_size(list) > data_size_after_pack);
 }
@@ -294,6 +294,11 @@ void test_list_overload(CuTest* tc) {
 
     list_free(list);
     free(list);
+}
+
+void test_list_empty(CuTest* tc) {
+    CuAssertTrue(tc, list_is_empty(&LIST_EMPTY));
+    CuAssertIntEquals(tc, list_get_size(&LIST_EMPTY), 0);
 }
 
 CuSuite* list_suite(void) {

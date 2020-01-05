@@ -10,10 +10,18 @@
 #include <string.h>
 #include <stdlib.h>
 
-typedef enum {
+#define ENUM_SIZE(name) (sizeof(name##Values)/sizeof(enum name))
+
+#define ENUM(name, ...) \
+enum name { __VA_ARGS__ }; \
+static const enum name name##Values[] = { __VA_ARGS__ }; \
+static const int name##Size = ENUM_SIZE(name);
+
+typedef enum ErrorCode {
     ERROR_NONE = 0,
-    ERROR_OUT_OF_BOUNDS = 0x0001,
-    ERROR_IO = 0x0002
+    ERROR_OUT_OF_BOUNDS,
+    ERROR_IO,
+    ERROR_UNKNOWN
 } ErrorCode;
 
 static const char* error_get_name(ErrorCode ec) {
@@ -24,6 +32,8 @@ static const char* error_get_name(ErrorCode ec) {
             return "Out Of Bounds";
         case ERROR_IO:
             return "IO Error";
+        case ERROR_UNKNOWN:
+            return "Unknown Error";
         default:
             return "(Invalid Error Code)";
     }

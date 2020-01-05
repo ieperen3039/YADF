@@ -1,0 +1,22 @@
+{ // line and block comments in this file will be stripped prior to processing
+  "mesh_color_names" : {
+    // full red indicates the base material
+    "base_material" : "#ff0000", // hex may have a preceding #
+    // full green indicates secondary material
+    "secondary_material" : [0, 255, 0] // also [r, g, b] arrays may be used, with integers [0 ... 255]
+  },
+
+  "materials" : {
+//    "!invalid" : [1, 2, 3],
+    "slate" : [200, 200, 200],
+    "basalt" : [50, 50, 50]
+  },
+
+  "entities" : {
+    // undug stone, ground and ore
+    "natural_wall" : {
+      "mesh_file" : "models/cube_red.ply",
+      "opaque" : true
+    }
+  }
+}

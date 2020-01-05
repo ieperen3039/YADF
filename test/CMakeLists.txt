@@ -2,7 +2,7 @@ add_executable(
         unit_test EXCLUDE_FROM_ALL
         main.c
         CuTest.c
-        ../src/DataStructures/StaticMonoAllocator.c
+        ../src/YADFEngine/DataStructures/StaticMonoAllocator.c
 )
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 --coverage -fno-inline -fno-inline-small-functions -fno-default-inline --branch-count-reg")
