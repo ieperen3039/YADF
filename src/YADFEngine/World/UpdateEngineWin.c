@@ -2,14 +2,16 @@
 // Created by s152717 on 29-12-2019.
 //
 
-#include "UpdateEngine.h"
-#include <process.h>
-
 #if _WIN32_WINNT < 0x0501
     #undef _WIN32_WINNT
     #define _WIN32_WINNT 0x0600
 #endif
 
+#include "UpdateEngine.h"
+#include "../Entities/EntityInstance.h"
+#include "../World/World.h"
+
+#include <process.h>
 #include <windows.h>
 
 #ifndef WORKER_COUNT
@@ -38,7 +40,7 @@ void worker_loop(void* worker_pool_ptr) {
     while (pool->keep_going) {
 
         EnterCriticalSection(&pool->condition_lock);
-        while (!pool->has_data) {
+        while (!pool->has_data && pool->keep_going) {
             // Buffer is full - sleep so consumers can get items.
             SleepConditionVariableCS(&pool->condition, &pool->condition_lock, INFINITE);
         }

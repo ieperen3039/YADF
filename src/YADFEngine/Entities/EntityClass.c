@@ -3,14 +3,14 @@
 //
 
 #include "EntityClass.h"
-#include "EntityImplStatic.h"
+#include "EntityImpl.h"
+#include "EntityUpdateStatic.h"
 #include "../DataStructures/List.h"
-#include "Callbacks.h"
 
 struct EntityClassData type_data[ENUM_SIZE(EntityClass)];
 bool is_init = false;
 
-void entity_class_init(VisualCreationFunction visual_create) {
+void entity_class_init() {
     if (is_init) return;
 
     for (int i = 0; i < EntityClassSize; ++i) {
@@ -23,19 +23,20 @@ void entity_class_init(VisualCreationFunction visual_create) {
                 data->name = "natural wall";
                 data->metadata_size = sizeof(struct EntityImplNaturalWall);
                 data->update = entity_impl_natural_wall_update;
-                data->visual = visual_create(data->name);
-                data->nr_of_materials = 1;
                 break;
 
             case GRASS:
                 data->name = "grass";
                 data->metadata_size = sizeof(struct EntityImplGrass);
                 data->update = entity_impl_grass_update;
-                data->visual = visual_create(data->name);
-                data->nr_of_materials = 2;
                 break;
 
             default: assert(false);
+            case CREATURE:
+                data->name = "creature"; // TODO valid update
+                data->metadata_size = sizeof(struct EntityImplGrass);
+                data->update = entity_impl_grass_update;
+                break;
         }
     }
 

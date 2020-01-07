@@ -2,9 +2,11 @@
 // Created by ieperen3039 on 27-11-19.
 //
 
-#include <assert.h>
 #include "World.h"
 #include "../DataStructures/StaticMonoAllocator.h"
+#include <assert.h>
+#include <WorldAPI.h>
+
 
 struct _Entity;
 
@@ -246,17 +248,6 @@ PURE WorldTile* world_get_tile_from_chunk(WorldChunk* chunk, Vector3i coord) {
     }
 
     return &(chunk->grid[coord.x][coord.y][coord.z]);
-}
-
-void world_exec_layer(WorldChunk* chunk, int layer, TileFunction action) {
-    int z = layer % CHUNK_LENGTH;
-    if (z < 0) z += CHUNK_LENGTH;
-    int begin = (z << (2 * CHUNK_COORD_BITS));
-    int end = begin + (CHUNK_LENGTH * CHUNK_LENGTH);
-
-    for (int i = begin; i < end; i++) {
-        action(&chunk->tiles[i], i % CHUNK_LENGTH, (i - begin) / CHUNK_LENGTH, layer);
-    }
 }
 
 int world_initialize_area(World* world, const BoundingBox area, const WorldTile initial_tile) {

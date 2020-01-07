@@ -3,43 +3,28 @@
 //
 
 #include "Shader.h"
-#include "ShaderControl.h"
 #include "../YADFEngine/Tools.h"
 
+#include <GL/glew.h>
 #include <malloc.h>
-#include <assert.h>
 
-#define SHADER_MAX_NUM_LIGHTS 16
 #define SHADER_MAX_NUM_MATERIALS 8 // materials per entity
-
-static const Vector3fc AMBIENT_LIGHT = {0.15f, 0.15f, 0.15f};
 
 struct _Shader {
     GLuint ID;
-    GLuint viewProjectionMatrix; // matrix4f
-    GLuint origin; // vec3f
-    GLuint rotation; // byte
-    GLuint cameraPosition; // vec3f
-    GLuint ambientLight; // vec3f
-
-    int nextLightIndex;
-    struct SLight {
-        GLuint color;
-        GLuint mPosition;
-        GLuint intensity;
-    } lights[SHADER_MAX_NUM_LIGHTS];
-
+    GLuint texture_position;
+    GLuint camera_position;
+    GLuint scaling;
+    GLuint sprite;
     GLuint colors[SHADER_MAX_NUM_MATERIALS];
-
-    Color4f material_colors[ENUM_SIZE(Material)];
 };
 
 static GLuint
 create_program(const char* vertex_shader_text, const char* fragment_shader_text, const char* geometry_shader_text);
 
-Shader* shader_new(Color4f* material_properties) {
-    char* vertex_shader = tool_read_file("res/flat_shader.vert", NULL);
-    char* fragment_shader = tool_read_file("res/flat_shader.frag", NULL);
+Shader* shader_new() {
+    char* vertex_shader = tool_read_file("res/tile_shader.vert", NULL);
+    char* fragment_shader = tool_read_file("res/tile_shader.frag", NULL);
     if (vertex_shader == NULL || fragment_shader == NULL) return NULL;
 
     GLuint shader = create_program(vertex_shader, fragment_shader, NULL);
@@ -47,91 +32,54 @@ Shader* shader_new(Color4f* material_properties) {
 
     Shader* p = malloc(sizeof(Shader));
     p->ID = shader;
-    p->viewProjectionMatrix = glGetUniformLocation(shader, "viewProjectionMatrix");
-    p->origin = glGetUniformLocation(shader, "origin");
-    p->rotation = glGetUniformLocation(shader, "rotation");
-    p->ambientLight = glGetUniformLocation(shader, "ambientLight");
-    p->cameraPosition = glGetUniformLocation(shader, "cameraPosition");
-
-    for (int i = 0; i < SHADER_MAX_NUM_LIGHTS; ++i) {
-        char uniform_name[25];
-        int curr = snprintf(uniform_name, 12, "lights[%d]", i);
-        char* field = uniform_name + curr;
-
-        strcpy(field, ".color");
-        p->lights[i].color = glGetUniformLocation(shader, uniform_name);
-        strcpy(field, ".mPosition");
-        p->lights[i].mPosition = glGetUniformLocation(shader, uniform_name);
-        strcpy(field, ".intensity");
-        p->lights[i].intensity = glGetUniformLocation(shader, uniform_name);
-    }
+    p->sprite = glGetUniformLocation(shader, "sprite");
+    p->texture_position = glGetUniformLocation(shader, "sprite_origin");
+    p->camera_position = glGetUniformLocation(shader, "camera_position");
+    p->scaling = glGetUniformLocation(shader, "scaling");
 
     for (int i = 0; i < SHADER_MAX_NUM_MATERIALS; ++i) {
         char uniform_name[15];
-        snprintf(uniform_name, 15, "materials[%d]", i);
+        snprintf(uniform_name, 15, "colors[%d]", i);
         p->colors[i] = glGetUniformLocation(shader, uniform_name);
     }
 
-    for (int i = 0; i < MaterialSize; ++i) {
-        p->material_colors[i] = material_properties[i];
-    }
+    assert(p->sprite != -1);
+    assert(p->texture_position != -1);
+    assert(p->camera_position != -1);
+    assert(p->scaling != -1);
 
     return p;
 }
 
-void shader_bind(Shader* shader, Vector3fc* camera_eye) {
+void shader_bind(Shader* shader, Vector3fc* eye, int window_width, int window_height) {
     glUseProgram(shader->ID);
-    glUniform3f(shader->ambientLight, AMBIENT_LIGHT.x, AMBIENT_LIGHT.y, AMBIENT_LIGHT.z);
-    glUniform3f(shader->cameraPosition, camera_eye->x, camera_eye->y, camera_eye->z);
+    glUniform1i(shader->sprite, 0); // set texture manually
+    double zoom_factor = 100.0;
+    glUniform2f(shader->scaling, -zoom_factor / window_width, -zoom_factor / window_height);
 
-    // set all lights to zero
-    for (int i = 0; i < SHADER_MAX_NUM_LIGHTS; ++i) {
-        glUniform1f(shader->lights[i].intensity, 0);
-    }
-    shader->nextLightIndex = 0;
+    double x = 0.5 * (eye->x - eye->y);
+    double y = eye->z - 0.5 * (eye->x + eye->y);
+    glUniform2f(shader->camera_position, x, y);
 }
 
 void shader_unbind(Shader* shader) {
     glUseProgram(0);
 }
 
-void shader_add_light(Shader* shader, Vector3fc position, Color4f color, float intensity, bool infinite) {
-    int lightNumber = shader->nextLightIndex++;
-    assert(lightNumber < SHADER_MAX_NUM_LIGHTS);
-    assert(color.a > 0);
-    struct SLight li = shader->lights[lightNumber];
-
-    glUniform4f(li.mPosition, position.x, position.y, position.z, infinite ? 0.0f : 1.0f);
-    glUniform3f(li.color, color.r / color.a, color.g / color.a, color.b / color.a);
-    glUniform1f(li.intensity, intensity);
-}
-
-void shader_set_material(Shader* shader, int index, Material material) {
-    assert(index < SHADER_MAX_NUM_MATERIALS);
-
-    Color4f color = (material < 0) ? COLOR_BLACK : shader->material_colors[material];
-
+void shader_set_color(Shader* shader, int index, Color4f color) {
     glUniform3f(shader->colors[index], color.r, color.g, color.b);
 }
 
 void shader_set_tile_position(Shader* shader, Vector3i coordinate) {
-    // real position is twice the coordinate; tiles are 2 in size
-    glUniform3i(shader->origin, 2 * coordinate.x, 2 * coordinate.y, 2 * coordinate.z);
-}
+    double x = 0.5 * (coordinate.x - coordinate.y);
+    double y = 0.5 * (coordinate.z - 0.5 * (coordinate.x + coordinate.y));
 
-void shader_set_view_projection_matrix(Shader* shader, Matrix4f* matrix) {
-    glUniformMatrix4fv(shader->viewProjectionMatrix, 1, false, matrix_as_array(matrix));
+    glUniform2f(shader->texture_position, x - 0.5, y + 0.5);
 }
 
 void shader_free(Shader* shader) {
     glDeleteProgram(shader->ID);
     free(shader);
-}
-
-GLuint shader_id(Shader* shader) { return shader->ID; }
-
-void shader_set_tile_rotation(Shader* shader, char rotation) {
-    glUniform1i(shader->rotation, rotation);
 }
 
 /// @see #new_Shader(const char*, const char* const char*)

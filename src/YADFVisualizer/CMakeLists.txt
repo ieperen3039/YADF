@@ -16,28 +16,21 @@ endif ()
 
 include_directories(${DIRECTORY}/include ${OPENGL_INCLUDE_DIRS} ${GLFW_INCLUDE_DIRS})
 
-configure_file(../YADFVisualizer/Shaders/flat_shader.vert ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/res/flat_shader.vert COPYONLY)
-configure_file(../YADFVisualizer/Shaders/flat_shader.frag ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/res/flat_shader.frag COPYONLY)
+configure_file(../YADFVisualizer/Shaders/tile_shader.vert ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/res/tile_shader.vert COPYONLY)
+configure_file(../YADFVisualizer/Shaders/tile_shader.frag ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/res/tile_shader.frag COPYONLY)
 
 add_executable(
         YADFVisualizer
         main.c
 
+        External/nanovg/nanovg.c
         External/glew.c
-        ${ENGINE_DIRECTORY}/External/cJSON.c
+        External/cJSON.c
 
-        ${ENGINE_DIRECTORY}/Tools.c
-        ${ENGINE_DIRECTORY}/World/World.c
-        ${ENGINE_DIRECTORY}/DataStructures/Matrix4f.c
-        ${ENGINE_DIRECTORY}/DataStructures/Vector3f.c
-        ${ENGINE_DIRECTORY}/DataStructures/StaticMonoAllocator.c
-
-        Mesh.c
+        Sprite.c
         Shader.c
         Window.c
-        Visual.c
-        Camera.c
-        MaterialProperties.c
+        RenderFrame.c
 )
 
 target_compile_definitions(YADFVisualizer PUBLIC GLEW_STATIC)

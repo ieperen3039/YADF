@@ -19,7 +19,7 @@ add_library(
         External/open-simplex-noise.c
         External/cJSON.c
 
-        API.c
+        YADFEngine.c
         DataStructures/Matrix4f.c
         DataStructures/Vector3f.c
         DataStructures/StaticMonoAllocator.c
@@ -27,9 +27,8 @@ add_library(
         Entities/Fluids.c
         World/WorldGenerator.c
         Entities/EntityClass.c
-        Entities/EntityImplStatic.c
-        Tools.c
-        Entities/Entity.c
+        Entities/EntityUpdateStatic.c
+        Entities/EntityInstance.c
         World/World.c
 )
 target_compile_definitions(YADFEngine PRIVATE YADF_BUILD)

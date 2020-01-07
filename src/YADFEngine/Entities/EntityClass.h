@@ -5,28 +5,10 @@
 #ifndef YADF_ENTITYCLASS_H
 #define YADF_ENTITYCLASS_H
 
-#include "Callbacks.h"
-#include "global.h"
+#include <global.h>
+#include <Entity.h>
 
-typedef struct _Shader Shader;
-typedef struct _Entity Entity;
-
-typedef void (* UpdateFunction)(Entity* this);
-
-struct EntityClassData {
-    const char* name;
-    UpdateFunction update;
-    Visual* visual;
-    int nr_of_materials;
-    size_t metadata_size;
-};
-
-ENUM(EntityClass,
-     NATURAL_WALL,
-     GRASS,
-)
-
-void entity_class_init(VisualCreationFunction visual_create);
+void entity_class_init();
 
 PURE const struct EntityClassData* entity_class_get(enum EntityClass type);
 

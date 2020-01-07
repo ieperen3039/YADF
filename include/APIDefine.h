@@ -5,14 +5,22 @@
 #ifndef YADF_APIDEFINE_H
 #define YADF_APIDEFINE_H
 
+#if !defined(__WINDOWS__) && (defined(WIN32) || defined(WIN64) || defined(_MSC_VER) || defined(_WIN32))
+#define __WINDOWS__
+#endif
+
 #ifdef YADF_STATIC
-#  define YADF_API extern
+#   define YADF_API extern
 #else
-#  ifdef YADF_BUILD
-#    define YADF_API extern __declspec(dllexport)
-#  else
-#    define YADF_API extern __declspec(dllimport)
-#  endif
+#    if defined(__WINDOWS__)
+#       ifdef YADF_BUILD
+#           define YADF_API extern __declspec(dllexport)
+#       else
+#           define YADF_API extern __declspec(dllimport)
+#       endif
+#   else
+#       define YADF_API extern
+#   endif
 #endif
 
 #endif //YADF_APIDEFINE_H

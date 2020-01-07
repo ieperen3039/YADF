@@ -21,6 +21,7 @@ typedef enum ErrorCode {
     ERROR_NONE = 0,
     ERROR_OUT_OF_BOUNDS,
     ERROR_IO,
+    ERROR_JSON,
     ERROR_UNKNOWN
 } ErrorCode;
 
@@ -32,6 +33,8 @@ static const char* error_get_name(ErrorCode ec) {
             return "Out Of Bounds";
         case ERROR_IO:
             return "IO Error";
+        case ERROR_JSON:
+            return "JSON Error";
         case ERROR_UNKNOWN:
             return "Unknown Error";
         default:

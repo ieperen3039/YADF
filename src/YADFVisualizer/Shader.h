@@ -5,10 +5,16 @@
 #ifndef YADF_SHADER_H
 #define YADF_SHADER_H
 
-#include "../YADFEngine/DataStructures/Structs.h"
-#include "../YADFEngine/Entities/Materials.h"
+#include "Structs.h"
+#include "Materials.h"
 
 typedef struct _Shader Shader;
+
+Shader* shader_new();
+
+void shader_bind(Shader* shader, Vector3fc* eye, int window_width, int window_height);
+
+void shader_unbind(Shader* shader);
 
 /**
  * sets the ith part of the next object to the given material.
@@ -16,14 +22,10 @@ typedef struct _Shader Shader;
  * @param index the part to color
  * @param material the material
  */
-void shader_set_material(Shader* shader, int index, Material material);
+void shader_set_color(Shader* shader, int index, Color4f color);
 
 void shader_set_tile_position(Shader* shader, Vector3i coordinate);
 
-void shader_set_tile_rotation(Shader* shader, char rotation);
-
-void shader_set_view_projection_matrix(Shader* shader, Matrix4f* matrix);
-
-void shader_add_light(Shader* shader, Vector3fc position, Color4f color, float intensity, bool infinite);
+void shader_free(Shader* shader);
 
 #endif //YADF_SHADER_H

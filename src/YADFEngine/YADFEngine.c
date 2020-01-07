@@ -2,9 +2,10 @@
 // Created by s152717 on 5-1-2020.
 //
 
-#include "API.h"
+#include "YADFEngine.h"
 #include "World/WorldGenerator.h"
 #include "World/UpdateEngine.h"
+#include "Entities/EntityClass.h"
 
 struct _YADFEngine {
     UpdateWorkerPool* workers;
@@ -12,14 +13,14 @@ struct _YADFEngine {
     UpdateCycle game_time;
 };
 
-YADF_API YADFEngine* yadf_init(VisualCreationFunction create_visual) {
+YADF_API YADFEngine* yadf_init() {
     LOG_INFO("Starting Simulator...");
     YADFEngine* engine = malloc(sizeof(YADFEngine));
 
     engine->workers = update_workers_new();
 
     LOG_INFO("Loading material and item properties");
-    entity_class_init(create_visual);
+    entity_class_init();
 
     LOG_INFO("Generating world...");
     World* world = world_new(1000);
@@ -38,6 +39,10 @@ YADF_API void yadf_trigger_loop_update(YADFEngine* engine) {
 
 YADF_API World* yadf_get_world(YADFEngine* engine) {
     return engine->world;
+}
+
+YADF_API const struct EntityClassData* yadf_get_entity_class(enum EntityClass entity_class) {
+    return entity_class_get(entity_class);
 }
 
 YADF_API void yadf_free(YADFEngine* engine) {

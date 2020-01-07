@@ -5,9 +5,9 @@
 #ifndef YADF_WORLDGENERATOR_H
 #define YADF_WORLDGENERATOR_H
 
-#include "../Entities/Entity.h"
+#include "../Entities/EntityInstance.h"
 #include "../External/open-simplex-noise.h"
-#include "../Entities/EntityImplStatic.h"
+#include "EntityImpl.h"
 
 static void generator_generate_default(World* world, BoundingBox area) {
     WorldTile base_tile;
@@ -17,9 +17,10 @@ static void generator_generate_default(World* world, BoundingBox area) {
 
     struct osn_context* noise;
     open_simplex_noise(0, &noise);
-    double noise_scale = 10.0;
+    double noise_scale = 5.0;
 
     // set ground to slate blocks
+    struct EntityImplNaturalWall data = {SLATE};
 
     WorldChunkIterator chunk_itr = world_get_chunk_iterator(world, area);
     while (world_chunk_iterator_has_next(&chunk_itr)) {
@@ -34,9 +35,8 @@ static void generator_generate_default(World* world, BoundingBox area) {
                     noise, tile.coord.x / noise_scale, tile.coord.y / noise_scale, tile.coord.z / noise_scale
             );
 
-            if (noise_value > 0.5f) {
-                Material mat[] = {SLATE};
-                Entity* rock = entity_new(NATURAL_WALL, NULL, mat);
+            if (noise_value > 0.1f) {
+                Entity* rock = entity_new(NATURAL_WALL, &data);
                 world_tile_add_entity(tile, rock, chunk.elt);
             }
         }

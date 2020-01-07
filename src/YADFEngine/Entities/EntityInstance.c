@@ -2,16 +2,15 @@
 // Created by s152717 on 4-1-2020.
 //
 
-#include "Entity.h"
+#include "EntityInstance.h"
+#include "EntityClass.h"
+#include "Materials.h"
 
-Entity* entity_new(enum EntityClass type, const void* initial_data, Material* materials) {
+Entity* entity_new(enum EntityClass type, const void* initial_data) {
     const struct EntityClassData* class_data = entity_class_get(type);
-
-    size_t material_array_data_size = class_data->nr_of_materials * sizeof(Material);
 
     Entity* new_entity = malloc(
             sizeof(Entity) +
-            material_array_data_size +
             class_data->metadata_size
     );
 
@@ -19,17 +18,7 @@ Entity* entity_new(enum EntityClass type, const void* initial_data, Material* ma
     new_entity->class = class_data;
     new_entity->flags = 0;
 
-    void* material_ptr = new_entity + 1;
-    if (material_array_data_size > 0){
-        assert(materials != NULL);
-        memcpy(material_ptr, materials, material_array_data_size);
-        new_entity->materials = material_ptr;
-
-    } else {
-        new_entity->materials = NULL;
-    }
-
-    void* data_ptr = material_ptr + material_array_data_size;
+    void* data_ptr = new_entity + 1;
     if (class_data->metadata_size > 0) {
         assert(initial_data != NULL);
         new_entity->entity_data = data_ptr;

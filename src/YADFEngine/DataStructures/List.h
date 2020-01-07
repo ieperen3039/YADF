@@ -16,7 +16,7 @@
 
 #define LIST_GROWTH_FACTOR_SMALL 2
 #define LIST_GROWTH_SMALL_LIMIT 64
-#define LIST_GROWTH_FACTOR_LARGE 1.2
+#define LIST_GROWTH_FACTOR_LARGE 1.2f
 #define LIST_MINIMUM_SIZE 4
 
 typedef struct { // in-place definition to allow stack-allocation
@@ -64,12 +64,12 @@ static void list_free(List* list) {
 }
 
 /// get the address of the element at the given index without bounds checking
-PURE static inline void* list_get(const List* list, int index) {
+PURE static inline void* list_get(const List* list, unsigned int index) {
     return list->_data + (index * list->_element_size);
 }
 
 /// get a pointer to the element at the given index with bounds checking
-PURE static inline void* list_get_checked(const List* list, int index) {
+PURE static inline void* list_get_checked(const List* list, unsigned int index) {
     if (index < 0 || index >= list->_size) {
         return NULL;
     }
@@ -88,7 +88,7 @@ static inline ErrorCode list_set(List* list, int index, const void* value) {
 }
 
 /// DO NOT USE
-static void _list_grow_capacity(List* list, int minimum_size) {
+static void _list_grow_capacity(List* list, unsigned int minimum_size) {
     if (list->_capacity < LIST_MINIMUM_SIZE) {
         list->_capacity = LIST_MINIMUM_SIZE;
 
@@ -96,7 +96,7 @@ static void _list_grow_capacity(List* list, int minimum_size) {
         size_t data_size = list->_capacity * list->_element_size;
         float growth_factor = (data_size < LIST_GROWTH_SMALL_LIMIT ? LIST_GROWTH_FACTOR_SMALL
                                                                    : LIST_GROWTH_FACTOR_LARGE);
-        list->_capacity = (int) ceilf(list->_capacity * growth_factor);
+        list->_capacity = (int) ceilf((float) list->_capacity * growth_factor);
     }
 
     if (list->_capacity < minimum_size)

@@ -35,12 +35,4 @@ static const Color4f COLOR_GRAY = {0.5f, 0.5f, 0.5f, 1};
 
 typedef int UpdateCycle;
 
-//struct _World;
-//typedef struct {
-//    struct _World* world;
-//
-//    UpdateCycle time;
-//    char cycles_per_second;
-//} Game;
-
 #endif //YADF2_STRUCTS_H

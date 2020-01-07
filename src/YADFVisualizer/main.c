@@ -4,20 +4,20 @@
  */
 
 #include "global.h"
+#include <APIDefine.h>
+#include <YADFEngine.h>
 #include "Window.h"
-#include "API.h"
-#include "Visual.h"
 
 #define GAME_FPS 30.0
 
 // sleep function
-#if defined(WIN32)
+#if defined(__WINDOWS__)
     #include <time.h>
     #include <windows.h>
 
     #define wait_for(time_ms) Sleep((time_ms))
 
-#elif defined(LINUX)
+#elif defined(__linux__)
     #include <unistd.h>
     #define wait_for(time_ms) usleep((time_ms) * 1000)
 
@@ -29,11 +29,11 @@ int main(int argc, char** argv) {
     LOG_INFO("Reading parameters...");
     // ...
 
+    LOG_INFO("Starting Simulation engine...");
+    YADFEngine* simulator = yadf_init();
+
     LOG_INFO("Starting Graphics engine...");
     Visualizer* visualizer = visualizer_create_window();
-
-    LOG_INFO("Starting Simulation engine...");
-    YADFEngine* simulator = yadf_init(visual_create);
 
     LOG_INFO("Setup done!");
     UpdateCycle game_time = 0;

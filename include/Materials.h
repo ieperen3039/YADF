@@ -20,6 +20,7 @@ PURE static const char* material_name(Material material){
             return "slate";
         case BASALT:
             return "basalt";
+
         default: return "non-existent material";
     }
 }
