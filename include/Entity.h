@@ -7,17 +7,19 @@
 
 #include "global.h"
 #include "Structs.h"
-#include <stdlib.h>
+#include "WorldAPI.h"
 
 typedef struct _Entity Entity;
 typedef enum Material Material;
 typedef struct _WorldChunk WorldChunk;
 
-typedef void (* UpdateFunction)(Entity* this);
+typedef void (* UpdateFunction)(Entity* this, UpdateCycle game_time);
+typedef void (* ApplicationFunction)(Entity* this, Vector3ic* coordinate, WorldTile* tile);
 
 struct EntityClassData {
     const char* name;
-    UpdateFunction update;
+    UpdateFunction pre_update;
+    ApplicationFunction post_update;
     size_t metadata_size;
 };
 
@@ -29,13 +31,14 @@ ENUM(EntityClass,
 
 typedef struct _Entity { // this struct is fail-fast (less bug-prone) if the first element is NOT a pointer
     enum EntityClass type;
-    void* entity_data; // the entity meta-data
     int flags;
+    void* entity_data; // the entity meta-data
 
     const struct EntityClassData* class;
 
     WorldChunk* chunk;
     Vector3i position;
+    Vector3i updatePosition; // may be equal to position
 } Entity;
 
 #endif //YADF_ENTITY_H

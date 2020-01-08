@@ -9,7 +9,6 @@
 
 #include <stdio.h>
 #include <errno.h>
-#include <io.h>
 #include <assert.h>
 
 /// reads the contents of the given file into a char[]. If strlen is not NULL, the length of the returned char[] is stored there.

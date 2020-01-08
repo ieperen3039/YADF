@@ -26,12 +26,13 @@ void update_workers_free(UpdateWorkerPool* pool);
 
 /**
  * Updates a single world tick.
- * This method takes the minimum time required to distribute the work, and returns possibly before the update has finished.
- * This might mean that all work is done in this method
+ * This method blocks until the update is completed
  * @param world the world to update
  * @param game_time the current game time
- * @param worker_pool the available workers
+ * @param pool the available workers
  */
-void update_world_tick(World* world, UpdateCycle game_time, UpdateWorkerPool* worker_pool);
+void update_world_tick(World* world, UpdateCycle game_time, UpdateWorkerPool* pool);
+
+
 
 #endif //YADF_UPDATEENGINE_H

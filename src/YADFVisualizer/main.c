@@ -4,22 +4,23 @@
  */
 
 #include "global.h"
-#include <APIDefine.h>
 #include <YADFEngine.h>
 #include "Window.h"
+#include <time.h>
 
 #define GAME_FPS 30.0
 
 // sleep function
 #if defined(__WINDOWS__)
-    #include <time.h>
     #include <windows.h>
 
     #define wait_for(time_ms) Sleep((time_ms))
+    #define set_current_millis(var) QueryPerformanceCounter(&var);
 
 #elif defined(__linux__)
     #include <unistd.h>
-    #define wait_for(time_ms) usleep((time_ms) * 1000)
+    #define wait_for(time_ms) usleep((time_ms) * 1e6)
+    #define set_current_millis(var) {struct timespec ts = {0, 0}; clock_gettime(0, &ts); var = (ts.tv_nsec / 1e6);}
 
 #else
     #define wait_for(time_ms) ; // don't wait at all
@@ -37,7 +38,8 @@ int main(int argc, char** argv) {
 
     LOG_INFO("Setup done!");
     UpdateCycle game_time = 0;
-    time_t loop_time = clock();
+    time_t loop_time;
+    set_current_millis(loop_time)
 
     while (!visualizer_is_closed(visualizer)) {
         time_t update_start = clock();
@@ -50,7 +52,8 @@ int main(int argc, char** argv) {
         time_t callback_start = clock();
         visualizer_callbacks(visualizer);
 
-        time_t end_time = clock();
+        time_t end_time;
+        set_current_millis(end_time)
 
         if ((end_time - loop_time) > 100){ // less than 10 FPS
             LOG_INFO_F(
@@ -67,7 +70,7 @@ int main(int argc, char** argv) {
             loop_time += (1000.0 / GAME_FPS);
 
         } else {
-            loop_time = clock();
+            set_current_millis(loop_time)
         }
 
         game_time++;

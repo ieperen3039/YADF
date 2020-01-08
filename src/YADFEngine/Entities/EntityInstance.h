@@ -15,10 +15,6 @@
 //#define ENTITY_FLAG_ (1 << 3)
 //#define ENTITY_FLAG_ (1 << 4)
 
-static inline void entity_update(Entity* ety) {
-    ety->class->update(ety);
-}
-
 /**
  * The metadata of this entity is set to a copy of the pointed data.
  * If initial_data is NULL, then the entity_data field will be NULL as well.

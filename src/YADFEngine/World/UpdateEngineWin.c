@@ -8,6 +8,7 @@
 #endif
 
 #include "UpdateEngine.h"
+#include "UpdateEngineShared.h"
 #include "../Entities/EntityInstance.h"
 #include "../World/World.h"
 
@@ -26,7 +27,7 @@ struct _UpdateWorkerPool {
     } workers[WORKER_COUNT];
 
     CRITICAL_SECTION condition_lock;
-    CONDITION_VARIABLE condition;
+    CONDITION_VARIABLE cond_has_elements;
 
     ListIterator buffer;
     volatile bool has_data;
@@ -42,7 +43,7 @@ void worker_loop(void* worker_pool_ptr) {
         EnterCriticalSection(&pool->condition_lock);
         while (!pool->has_data && pool->keep_going) {
             // Buffer is full - sleep so consumers can get items.
-            SleepConditionVariableCS(&pool->condition, &pool->condition_lock, INFINITE);
+            SleepConditionVariableCS(&pool->cond_has_elements, &pool->condition_lock, INFINITE);
         }
 
         if (!pool->keep_going) {
@@ -56,10 +57,7 @@ void worker_loop(void* worker_pool_ptr) {
 
         LeaveCriticalSection(&pool->condition_lock);
 
-        while (list_iterator_has_next(&tasks)) {
-            Entity** ety = list_iterator_next(&tasks);
-            entity_update(*ety);
-        }
+        update_entities_pre(tasks, 0);
     }
 
     // optional cleanup
@@ -69,7 +67,7 @@ UpdateWorkerPool* update_workers_new() {
     UpdateWorkerPool* pool = malloc(sizeof(UpdateWorkerPool));
     pool->keep_going = 1;
     InitializeCriticalSection(&pool->condition_lock);
-    InitializeConditionVariable(&pool->condition);
+    InitializeConditionVariable(&pool->cond_has_elements);
 
     for (int i = 0; i < WORKER_COUNT; ++i) {
         unsigned long thread_handle = _beginthread(worker_loop, 1, pool);
@@ -85,7 +83,7 @@ void update_workers_free(UpdateWorkerPool* pool) {
     pool->keep_going = 0;
     LeaveCriticalSection(&pool->condition_lock);
 
-    WakeAllConditionVariable(&pool->condition);
+    WakeAllConditionVariable(&pool->cond_has_elements);
 
     if (WAIT_FOR_THREADS) {
         HANDLE handle[WORKER_COUNT];
@@ -121,7 +119,7 @@ void update_world_tick(World* world, UpdateCycle game_time, UpdateWorkerPool* wo
         worker_pool->has_data = true;
 
         LeaveCriticalSection(&worker_pool->condition_lock);
-        WakeConditionVariable(&worker_pool->condition);
+        WakeConditionVariable(&worker_pool->cond_has_elements);
 
         next_batch_start = end_index;
     }

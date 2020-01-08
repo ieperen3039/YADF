@@ -29,7 +29,7 @@ typedef struct _WorldQuadrant WorldQuadrant;
 
 /**
  * given a nearby chunk, returns the tile on the given position.
- * This is likely to be faster than {@link world_get_tile} iff pos is indeed close to the given chunk
+ * This is likely to be faster than world_get_tile if pos is indeed close to the given chunk
  * @param chunk a chunk, possibly containing the given pos, otherwise close to the given chunk
  * @param pos the coordinate of the requested tile
  * @return the tile on the given coordinate, or NULL if this one is in an unloaded chunk.
