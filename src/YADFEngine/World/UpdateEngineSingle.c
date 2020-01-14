@@ -5,17 +5,28 @@
 #include "UpdateEngine.h"
 #include "UpdateEngineShared.h"
 
+struct _UpdateWorkerPool{
+    List all;
+    UpdateCycle game_time;
+};
+
 UpdateWorkerPool* update_workers_new() {
+    UpdateWorkerPool* pool = malloc(sizeof(UpdateWorkerPool));
+    pool->game_time = 0;
+    list_init(&pool->all, sizeof(struct EntityUpdateElt), 128);
     return NULL;
 }
 
 void update_workers_free(UpdateWorkerPool* pool) {
+    list_free(&pool->all);
+    free(pool);
 }
 
-void update_world_tick(World* world, UpdateCycle game_time, UpdateWorkerPool* null) {
+void update_start_tick(UpdateWorkerPool* pool, World* world) {
     List* src_list = world_get_entities_to_update(world);
 
-    update_entities_pre(list_iterator(src_list), game_time);
+    ListIterator entities = list_iterator(src_list);
+    update_entities_pre(&entities, pool->game_time++);
     
     List all;
     list_init(&all, sizeof(struct EntityUpdateElt), list_get_size(src_list));
@@ -32,8 +43,9 @@ void update_world_tick(World* world, UpdateCycle game_time, UpdateWorkerPool* nu
         elt.pos = &entity->updatePosition;
         list_add(&all, &elt);
     }
-    
-    update_entities_post(list_iterator(&all));
+
+    ListIterator iterator = list_iterator(&all);
+    update_entities_post(&iterator);
 
     list_clear(src_list);
 }

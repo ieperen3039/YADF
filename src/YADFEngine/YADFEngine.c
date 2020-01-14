@@ -10,14 +10,11 @@
 struct _YADFEngine {
     UpdateWorkerPool* workers;
     World* world;
-    UpdateCycle game_time;
 };
 
 YADF_API YADFEngine* yadf_init() {
     LOG_INFO("Starting Simulator...");
     YADFEngine* engine = malloc(sizeof(YADFEngine));
-
-    engine->workers = update_workers_new();
 
     LOG_INFO("Loading material and item properties");
     entity_class_init();
@@ -30,11 +27,14 @@ YADF_API YADFEngine* yadf_init() {
     generator_generate_default(world, (BoundingBox) {-20, -20, -10, 20, 20, 10});
     engine->world = world;
 
+    LOG_INFO("Booting worker threads");
+    engine->workers = update_workers_new();
+
     return engine;
 }
 
 YADF_API void yadf_trigger_loop_update(YADFEngine* engine) {
-    update_world_tick(engine->world, engine->game_time, engine->workers);
+    update_start_tick(engine->workers, engine->world);
 }
 
 YADF_API World* yadf_get_world(YADFEngine* engine) {
