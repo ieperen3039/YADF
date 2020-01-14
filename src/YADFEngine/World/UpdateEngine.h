@@ -16,7 +16,7 @@ typedef struct _UpdateWorkerPool UpdateWorkerPool;
  * create a new worker pool for updating the world state
  * @return an initialized worker pool
  */
-UpdateWorkerPool* update_workers_new();
+UpdateWorkerPool* update_workers_new(void);
 
 /**
  * Destroys a worker pool, waiting for them to finish their current work.
@@ -25,14 +25,12 @@ UpdateWorkerPool* update_workers_new();
 void update_workers_free(UpdateWorkerPool* pool);
 
 /**
- * Updates a single world tick.
- * This method blocks until the update is completed
+ * Starts a single update. This method must be called by the render thread, to allow synchronization
  * @param world the world to update
  * @param game_time the current game time
  * @param pool the available workers
  */
-void update_world_tick(World* world, UpdateCycle game_time, UpdateWorkerPool* pool);
-
+void update_start_tick(UpdateWorkerPool* pool, World* world);
 
 
 #endif //YADF_UPDATEENGINE_H

@@ -20,7 +20,7 @@
 #elif defined(__linux__)
     #include <unistd.h>
     #define wait_for(time_ms) usleep((time_ms) * 1e6)
-    #define set_current_millis(var) {struct timespec ts = {0, 0}; clock_gettime(0, &ts); var = (ts.tv_nsec / 1e6);}
+    #define set_current_millis(var) {struct timespec ts = {0, 0}; clock_gettime(0, &ts); var = (ts.tv_nsec / 1e6 + (time_t) ts.tv_sec * 1e3);}
 
 #else
     #define wait_for(time_ms) ; // don't wait at all
@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
     LOG_INFO("Reading parameters...");
     // ...
 
-    LOG_INFO("Starting Simulation engine...");
+    LOG_INFO("Starting Simulator...");
     YADFEngine* simulator = yadf_init();
 
     LOG_INFO("Starting Graphics engine...");
@@ -41,18 +41,19 @@ int main(int argc, char** argv) {
     time_t loop_time;
     set_current_millis(loop_time)
 
+    time_t update_start, render_start, end_time, callback_start;
+
     while (!visualizer_is_closed(visualizer)) {
-        time_t update_start = clock();
+        set_current_millis(update_start)
         yadf_trigger_loop_update(simulator);
 
-        time_t render_start = clock();
+        set_current_millis(render_start)
         World* world = yadf_get_world(simulator);
         visualizer_draw_frame(visualizer, world);
 
-        time_t callback_start = clock();
+        set_current_millis(callback_start)
         visualizer_callbacks(visualizer);
 
-        time_t end_time;
         set_current_millis(end_time)
 
         if ((end_time - loop_time) > 100){ // less than 10 FPS

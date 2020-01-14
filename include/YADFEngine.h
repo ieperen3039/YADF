@@ -14,7 +14,7 @@ typedef struct _YADFEngine YADFEngine;
 /**
  * initializes the world
  */
-YADF_API YADFEngine* yadf_init();
+YADF_API YADFEngine* yadf_init(void);
 
 /**
  * @param engine the game instance

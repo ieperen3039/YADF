@@ -97,8 +97,8 @@ void update_workers_free(UpdateWorkerPool* pool) {
     free(pool);
 }
 
-void update_world_tick(World* world, UpdateCycle game_time, UpdateWorkerPool* worker_pool) {
-    assert(world != NULL && worker_pool != NULL);
+void update_start_tick(UpdateWorkerPool* pool, World* world) {
+    assert(world != NULL && pool != NULL);
 
     List* src_list = world_get_entities_to_update(world);
     List list;
@@ -113,13 +113,13 @@ void update_world_tick(World* world, UpdateCycle game_time, UpdateWorkerPool* wo
         int end_index = min_i(next_batch_start + elements_per_worker, nr_of_entities);
         ListIterator batch = list_sublist_iterator(&list, next_batch_start, end_index);
 
-        EnterCriticalSection(&worker_pool->condition_lock);
+        EnterCriticalSection(&pool->condition_lock);
         // set buffer
-        worker_pool->buffer = batch;
-        worker_pool->has_data = true;
+        pool->buffer = batch;
+        pool->has_data = true;
 
-        LeaveCriticalSection(&worker_pool->condition_lock);
-        WakeConditionVariable(&worker_pool->cond_has_elements);
+        LeaveCriticalSection(&pool->condition_lock);
+        WakeConditionVariable(&pool->cond_has_elements);
 
         next_batch_start = end_index;
     }

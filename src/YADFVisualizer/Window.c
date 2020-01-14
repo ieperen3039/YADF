@@ -129,8 +129,8 @@ void visualizer_draw_frame(Visualizer* vis, World* world) {
     int window_height;
     glfwGetWindowSize(vis->window, &window_width, &window_height);
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     glViewport(0, 0, window_width, window_height);
+    glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     // TODO implement camera movement
     const Sprite** sprites = (const Sprite**) vis->entity_sprites;
