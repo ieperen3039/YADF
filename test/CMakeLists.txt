@@ -5,8 +5,12 @@ add_executable(
         ../src/YADFEngine/DataStructures/StaticMonoAllocator.c
 )
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 --coverage -fno-inline -fno-inline-small-functions -fno-default-inline --branch-count-reg")
+target_link_libraries(
+        unit_test
+        m
+)
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 --coverage -fno-inline -fno-inline-small-functions -fno-default-inline --branch-count-reg")
 
 add_test(
         NAME unit_test

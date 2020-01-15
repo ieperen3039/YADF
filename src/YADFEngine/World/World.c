@@ -171,11 +171,21 @@ WorldChunkIterator world_get_chunk_iterator(World* world, BoundingBox box) {
     return (WorldChunkIterator) {world->chunks, box, (Vector3i) {box.xMin, box.yMin, box.zMin}};
 }
 
+/** @return the zero_pos of the chunk containing the given world coordinate */
+Vector3i chunk_get_zero(Vector3i* tile_coord){
+    const int xRem = tile_coord->x % CHUNK_LENGTH;
+    const int yRem = tile_coord->y % CHUNK_LENGTH;
+    const int zRem = tile_coord->z % CHUNK_LENGTH;
+
+    return (Vector3i){
+        (tile_coord->x - xRem),
+        (tile_coord->y - yRem),
+        (tile_coord->z - zRem)
+    };
+}
+
 WorldChunkData world_chunk_iterator_next(WorldChunkIterator* itr) {
-    Vector3i zeroPos = itr->focus;
-    zeroPos.x -= (zeroPos.x % CHUNK_LENGTH);
-    zeroPos.y -= (zeroPos.y % CHUNK_LENGTH);
-    zeroPos.z -= (zeroPos.z % CHUNK_LENGTH);
+    Vector3i zeroPos = chunk_get_zero(&itr->focus);
 
     // update focus
     itr->focus.x += CHUNK_LENGTH;

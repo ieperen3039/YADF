@@ -8,6 +8,7 @@
 #include "CuTest.h"
 
 #define YADF_STATIC
+
 #include "../src/YADFEngine/World/World.c"
 
 #include <limits.h>
@@ -17,17 +18,20 @@
 #define AREA_PLUS_2 (AREA_SIZE + 2)
 
 void test_world_new(CuTest* tc) {
+    printf(
+            "\nChunks are (%d x %d x %d) in size, with %d tiles per chunk, and a data size of %zu KB\n",
+            CHUNK_LENGTH, CHUNK_LENGTH, CHUNK_LENGTH, CHUNK_LENGTH * CHUNK_LENGTH * CHUNK_LENGTH, sizeof(WorldChunk) / 1000
+    );
+
     World* world = world_new(INT_MAX);
     CuAssertPtrNotNull(tc, world);
-    unsigned long world_size = CHUNK_LENGTH;
-    world_size <<= world->depth;
-    
-    printf("\nChunks are (%d x %d x %d) in size\n", CHUNK_LENGTH, CHUNK_LENGTH, CHUNK_LENGTH);
-    unsigned long long n_ch = world_size / CHUNK_LENGTH; // biggest
-    printf("Maximum world size is %lu, containing %llu chunks per z-level, with a tree depth of %d\n", world_size, n_ch * n_ch, world->depth);
+    unsigned long long n_ch = 1 << world->depth;
+
+    printf("Maximum world size is %llu tiles wide, containing %llu chunks per z-level, with a tree depth of %d\n",
+            n_ch * CHUNK_LENGTH, n_ch * n_ch, world->depth);
 }
 
-void test_world_tile_data(CuTest* tc){
+void test_world_tile_data(CuTest* tc) {
     World* world = world_new(100);
     WorldTile base_tile = {LIST_EMPTY, TILE_FLAG_VISIBLE};
     BoundingBox area = (BoundingBox) {-AREA_SIZE, -AREA_SIZE, -AREA_SIZE, AREA_SIZE, AREA_SIZE, AREA_SIZE};
@@ -55,43 +59,51 @@ void test_world_iterator(CuTest* tc) {
     world_initialize_area(world, area, base_tile);
 
     Vector3i positions[] = {
-            {1, 2, 3},
-            {0, 0, 0},
-            {CHUNK_LENGTH,CHUNK_LENGTH, CHUNK_LENGTH},
-            {-1, 0, 0},
-            {-1, -1, 0},
-            {1, -1, 1},
-            {AREA_MIN_2, 0, 0},
-            {AREA_MIN_2, 0, -1},
-            {-AREA_MIN_2, -AREA_MIN_2, AREA_MIN_2}
+            {1,           2,  3},
+            {0,           0,  0},
+            {CHUNK_LENGTH, CHUNK_LENGTH, CHUNK_LENGTH},
+            {-1,          0,  0},
+            {-1,          -1, 0},
+            {1,           -1, 1},
+            {AREA_MIN_2,  0,  0},
+            {AREA_MIN_2,  0,  -1},
+            {-AREA_MIN_2, -AREA_MIN_2,   AREA_MIN_2}
     };
 
     // mark specific flags
     size_t num_positions = sizeof(positions) / sizeof(Vector3i);
-    for (int i = 0; i < num_positions; i++){
+    for (int i = 0; i < num_positions; i++) {
         world_get_tile(world, &positions[i])->flags |= TILE_FLAG_OPAQUE;
     }
 
     WorldChunkIterator itr = world_get_chunk_iterator(world, area);
-    while (world_chunk_iterator_has_next(&itr)){
+    while (world_chunk_iterator_has_next(&itr)) {
         WorldChunkData chunk = world_chunk_iterator_next(&itr);
+        CuAssertIntEquals(tc, chunk.elt->zero_pos.x, chunk.coord.x);
+        CuAssertIntEquals(tc, chunk.elt->zero_pos.y, chunk.coord.y);
+        CuAssertIntEquals(tc, chunk.elt->zero_pos.z, chunk.coord.z);
+        LOG_INFO_F("Chunk : (%d, %d, %d)", chunk.coord.x, chunk.coord.y, chunk.coord.z);
 
         WorldTileIterator itr2 = chunk_get_tile_iterator(chunk.elt);
-        while (chunk_tile_iterator_has_next(&itr2)){
+        while (chunk_tile_iterator_has_next(&itr2)) {
             WorldTileData tile = chunk_tile_iterator_next(&itr2);
 
-            CuAssert(tc, "Tile has been returned twice",!(tile.elt->flags & TILE_FLAG_DISCOVERED));
+            CuAssert(tc, "Tile has been returned twice", !(tile.elt->flags & TILE_FLAG_DISCOVERED));
 
             // check specific tiles
             bool has_found = false;
-            for (int i = 0; i < num_positions; i++){
-                if (memcmp(&positions[i], &tile.coord, sizeof(Vector3i)) == 0){
+            for (int i = 0; i < num_positions; i++) {
+                if (
+                        positions[i].x == tile.coord.x &&
+                        positions[i].y == tile.coord.y &&
+                        positions[i].z == tile.coord.z
+                        ) {
                     CuAssertIntEquals(tc, TILE_FLAG_VISIBLE | TILE_FLAG_OPAQUE, tile.elt->flags);
                     has_found = true;
                 }
             }
 
-            if (!has_found){
+            if (!has_found) {
                 CuAssertIntEquals(tc, TILE_FLAG_VISIBLE, tile.elt->flags);
             }
 
