@@ -5,13 +5,13 @@
 #ifndef YADF_TESTMAP_H
 #define YADF_TESTMAP_H
 
-#include "../src/DataStructures/Map.h"
-#include "../src/DataStructures/StaticMonoAllocator.h"
+#include "../src/YADFEngine/DataStructures/Map.h"
+#include "../src/YADFEngine/DataStructures/StaticMonoAllocator.h"
 
 AllocatorSM* alloc_map;
 
-void* test_map_get_list() {
-    return list_init(malloc(sizeof(List)), sizeof(TYPE), 0);
+void test_map_get_list(void* target, void* null) {
+    list_init(target, sizeof(TYPE), 0);
 }
 
 ElementMap* new_map() {

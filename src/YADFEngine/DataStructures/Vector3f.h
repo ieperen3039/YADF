@@ -15,6 +15,22 @@ static Vector3fc VECTOR_Y = {0, 1, 0};
 static Vector3fc VECTOR_Z = {0, 0, 1};
 
 /**
+ * computes a = a + b
+ * @param a the first operand and will hold the result
+ * @param b the second operand
+ * @return a = a + b
+ */
+Vector3f* vector_add(Vector3f* a, Vector3fc* b);
+
+/**
+ * computes a = a - b
+ * @param a the first operand and will hold the result
+ * @param b the second operand
+ * @return a = a - b
+ */
+Vector3f* vector_sub(Vector3f* a, Vector3fc* b);
+
+/**
  * Scale this vector to have length 1 and store the result in <code>dest</code>.
  *
  * @param vec the vector to normalize

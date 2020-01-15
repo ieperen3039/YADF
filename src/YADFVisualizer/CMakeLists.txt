@@ -14,7 +14,7 @@ if (NOT glfw3_FOUND) # if glfw3 can't be found, download the sources and set GLF
     add_subdirectory(${DIRECTORY}/../${GLFW_VERSION} glfw)
 endif ()
 
-include_directories(${DIRECTORY}/include ${OPENGL_INCLUDE_DIRS} ${GLFW_INCLUDE_DIRS})
+include_directories(${OPENGL_INCLUDE_DIRS} ${GLFW_INCLUDE_DIRS})
 
 configure_file(../YADFVisualizer/Shaders/tile_shader.vert ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/res/tile_shader.vert COPYONLY)
 configure_file(../YADFVisualizer/Shaders/tile_shader.frag ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/res/tile_shader.frag COPYONLY)

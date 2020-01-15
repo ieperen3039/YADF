@@ -9,10 +9,6 @@ else ()
     set(UPDATE_ENGINE_IMPL UpdateEngineSingle.c)
 endif ()
 
-set(HEADER_DIRECTORY "../../include")
-
-include_directories(${HEADER_DIRECTORY})
-
 add_library(
         YADFEngine SHARED
 

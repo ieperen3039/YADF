@@ -6,9 +6,7 @@
 
 #include <Entity.h>
 
-void entity_impl_grass_update(Entity* this, UpdateCycle game_time);
-
-void entity_impl_natural_wall_update(Entity* this, UpdateCycle game_time);
+void entity_impl_empty_update(Entity* this, UpdateCycle time);
 
 void entity_impl_grass_apply(Entity* this, Vector3ic* coordinate, WorldTile* tile);
 

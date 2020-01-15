@@ -24,7 +24,7 @@ struct _UpdateWorkerPool {
 
     sem_t loop_limiter;
     pthread_t dispatcher;
-    World* world;
+    volatile World* world;
 
     pthread_mutex_t lock_buffer;
     pthread_cond_t cond_has_space;
@@ -85,19 +85,6 @@ void sync_workers(UpdateWorkerPool* pool, enum State new_state) {
 
     pool->state = new_state;
     pthread_mutex_unlock(&pool->lock_buffer);
-}
-
-void update_workers_free(UpdateWorkerPool* pool) {
-    pthread_mutex_lock(&pool->lock_buffer);
-    pool->state = STATE_STOPPING;
-    pthread_cond_broadcast(&pool->cond_has_elements);
-    pthread_mutex_unlock(&pool->lock_buffer);
-
-    for (int i = 0; i < WORKER_COUNT; ++i) {
-        pthread_join(pool->workers[i].thread_id, NULL);
-    }
-
-    free(pool);
 }
 
 void dispatch(UpdateWorkerPool* pool, ListIterator batch) {
@@ -198,6 +185,19 @@ UpdateWorkerPool* update_workers_new() {
     pthread_create(&pool->dispatcher, NULL, update_dispatch, pool);
 
     return pool;
+}
+
+void update_workers_free(UpdateWorkerPool* pool) {
+    pthread_mutex_lock(&pool->lock_buffer);
+    pool->state = STATE_STOPPING;
+    pthread_cond_broadcast(&pool->cond_has_elements);
+    pthread_mutex_unlock(&pool->lock_buffer);
+
+    for (int i = 0; i < WORKER_COUNT; ++i) {
+        pthread_join(pool->workers[i].thread_id, NULL);
+    }
+
+    free(pool);
 }
 
 void update_start_tick(UpdateWorkerPool* pool, World* world) {

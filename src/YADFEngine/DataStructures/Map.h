@@ -11,7 +11,7 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
-#include "global.h"
+#include <global.h>
 
 // multiplier of map size upon reallocation
 #define MAP_SIZE_INCREASE 4.0
@@ -322,8 +322,9 @@ PURE static inline bool map_iterator_has_next(MapIterator* iterator) {
 
 /**
  * returns the element with the given key.
- * If no such element exist, supplier is called with the target address as first parameter, and supplier_data as second parameter.
- * supplier is never called if the element exists in the map.
+ * If no such element exist, the map allocates an area of element_size.
+ * It only then calls supplier with the address of this area as first parameter, and supplier_data as second parameter.
+ * Supplier is never called if the element exists in the map.
  * Can be useful for nested data structures;
  *
  * @code

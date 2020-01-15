@@ -7,14 +7,14 @@
 
 #include "CuTest.h"
 
-#include "../src/DataStructures/List.h"
-#include "../src/DataStructures/StaticMonoAllocator.h"
+#include "../src/YADFEngine/DataStructures/List.h"
+#include "../src/YADFEngine/DataStructures/StaticMonoAllocator.h"
 #include <limits.h>
 
-AllocatorSM* alloc_list;
+AllocatorSM* alloc_world;
 
 List* new_list() {
-    List* list = allocator_sm_alloc(alloc_list);
+    List* list = allocator_sm_alloc(alloc_world);
     assert(list != NULL);
     return list_init(list, sizeof(TYPE), 16);
 }
@@ -197,9 +197,8 @@ void test_list_pack(CuTest* tc) {
     size_t data_size_after_pack = list_get_data_size(list);
     CuAssertTrue(tc, data_size_after_pack < data_size_before_pack);
 
-    if (6 > list->_capacity) {
-        list_grow(list);
-    }
+    _list_grow_capacity(list, 6);
+
     CuAssertTrue(tc, list_get_data_size(list) > data_size_after_pack);
 }
 
@@ -303,7 +302,7 @@ void test_list_empty(CuTest* tc) {
 
 CuSuite* list_suite(void) {
     CuSuite* suite = CuSuiteNew();
-    alloc_list = allocator_sm_new(sizeof(List));
+    alloc_world = allocator_sm_new(sizeof(List));
 
     SUITE_ADD_TEST(suite, test_list_add_get);
     SUITE_ADD_TEST(suite, test_list_set);
@@ -320,7 +319,7 @@ CuSuite* list_suite(void) {
 }
 
 void list_cleanup() {
-    allocator_sm_free(alloc_list);
+    allocator_sm_free(alloc_world);
 }
 
 #endif //YADF_TESTLIST_H

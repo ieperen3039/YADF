@@ -7,6 +7,7 @@ add_executable(
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 --coverage -fno-inline -fno-inline-small-functions -fno-default-inline --branch-count-reg")
 
+
 add_test(
         NAME unit_test
         COMMAND unit_test

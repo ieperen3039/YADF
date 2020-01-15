@@ -1,6 +1,6 @@
 //
 // Created by ieperen3039 on 07-01-20.
-//
+// TODO look into using https://github.com/bjoernknafla/amp
 
 // (once): await loop trigger
 // (once): lock callbacks
@@ -118,7 +118,7 @@ void update_entities_post(ListIterator* entities) {
         struct EntityUpdateElt* element = list_iterator_next(entities);
         Entity* entity = element->ety;
 
-        WorldTile* tile = world_get_tile_from_chunk(entity->chunk, *element->pos);
+        WorldTile* tile = world_get_tile_from_chunk(entity->chunk, element->pos);
         entity->class->post_update(entity, element->pos, tile);
     }
 }

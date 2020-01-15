@@ -80,3 +80,17 @@ float vector_length_sq(Vector3fc* vec) {
 float vector_length(Vector3fc* vec) {
     return sqrtf(vector_length_sq(vec));
 }
+
+Vector3f* vector_add(Vector3f* a, Vector3fc* b) {
+    a->x += b->x;
+    a->y += b->y;
+    a->z += b->z;
+    return a;
+}
+
+Vector3f* vector_sub(Vector3f* a, Vector3fc* b) {
+    a->x -= b->x;
+    a->y -= b->y;
+    a->z -= b->z;
+    return a;
+}

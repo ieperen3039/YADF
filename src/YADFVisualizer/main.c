@@ -14,19 +14,28 @@
 #if defined(__WINDOWS__)
     #include <windows.h>
 
+    LARGE_INTEGER _QPCDiv;
+    #define INIT_TIME QueryPerformanceFrequency(&_QPCDiv)
+
     #define wait_for(time_ms) Sleep((time_ms))
-    #define set_current_millis(var) QueryPerformanceCounter(&var);
+    #define set_current_millis(var) {LARGE_INTEGER temp; QueryPerformanceCounter(&temp); var = (1000 * temp.QuadPart) / _QPCDiv.QuadPart;}
 
 #elif defined(__linux__)
     #include <unistd.h>
+
+    #define INIT_TIME
     #define wait_for(time_ms) usleep((time_ms) * 1e6)
     #define set_current_millis(var) {struct timespec ts = {0, 0}; clock_gettime(0, &ts); var = (ts.tv_nsec / 1e6 + (time_t) ts.tv_sec * 1e3);}
 
 #else
+    #define INIT_TIME
     #define wait_for(time_ms) ; // don't wait at all
+    #define set_current_millis(var) var = 0;
 #endif
 
 int main(int argc, char** argv) {
+    INIT_TIME;
+
     LOG_INFO("Reading parameters...");
     // ...
 
@@ -39,6 +48,7 @@ int main(int argc, char** argv) {
     LOG_INFO("Setup done!");
     UpdateCycle game_time = 0;
     time_t loop_time;
+
     set_current_millis(loop_time)
 
     time_t update_start, render_start, end_time, callback_start;

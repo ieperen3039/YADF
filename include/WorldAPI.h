@@ -34,14 +34,7 @@ typedef struct _WorldQuadrant WorldQuadrant;
  * @param pos the coordinate of the requested tile
  * @return the tile on the given coordinate, or NULL if this one is in an unloaded chunk.
  */
-YADF_API PURE WorldTile* world_get_tile_from_chunk(WorldChunk* chunk, Vector3i coord);
-
-typedef struct {
-
-} WorldDirectionalIterator;
-
-
-//TODO YADF_API WorldDirectionalIterator world_get_directional_iterator(World* world, BoundingBox box);
+YADF_API PURE WorldTile* world_get_tile_from_chunk(WorldChunk* chunk, Vector3ic* coord);
 
 typedef struct {
     WorldQuadrant* targetQuad;
@@ -89,6 +82,35 @@ YADF_API WorldTileData chunk_tile_iterator_next(WorldTileIterator* itr);
 
 /// returns true iff there are more tiles in the given iterator
 YADF_API bool chunk_tile_iterator_has_next(WorldTileIterator* itr);
+
+typedef struct {
+    const World* world;
+    WorldQuadrant* quad;
+    Vector3ic origin;
+    Vector3ic size;
+    int xSteps;
+    int ySteps;
+    int zSteps;
+    const bool xp, yp;
+    bool isSecondary;
+} WorldDirectionalIterator;
+
+/**
+ * an iterator specifically to iterate through an architectural perspective
+ * @param world the world to query the tiles from
+ * @param focus the middle of the are to iterate
+ * @param size the relative width and height of the area to iterate
+ * @param x_pos if true, iterate x in positive direction. if false, iterate x in negative direction
+ * @param y_pos if true, iterate y in positive direction. if false, iterate y in negative direction
+ * @param cutoff_z z-values above this level are not returned
+ * @return
+ */
+YADF_API WorldDirectionalIterator
+world_directional_iterator(const World* world, const Vector3f* focus, const Vector3f* size, bool x_pos, bool y_pos);
+
+YADF_API WorldTileData world_directional_iterator_next(WorldDirectionalIterator* itr);
+
+YADF_API bool world_directional_iterator_has_next(WorldDirectionalIterator* itr);
 
 YADF_API Vector3ic* chunk_get_position(WorldChunk* chunk);
 

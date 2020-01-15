@@ -22,22 +22,23 @@ void entity_class_init() {
             case NATURAL_WALL:
                 data->name = "natural wall";
                 data->metadata_size = sizeof(struct EntityImplNaturalWall);
-                data->pre_update = entity_impl_natural_wall_update;
+                data->pre_update = entity_impl_empty_update;
                 data->post_update = entity_impl_natural_wall_apply;
                 break;
 
             case GRASS:
                 data->name = "grass";
                 data->metadata_size = sizeof(struct EntityImplGrass);
-                data->pre_update = entity_impl_grass_update;
+                data->pre_update = entity_impl_empty_update;
                 data->post_update = entity_impl_grass_apply;
                 break;
 
             default: assert(false);
             case CREATURE:
                 data->name = "creature"; // TODO valid update
-                data->metadata_size = sizeof(struct EntityImplGrass);
-                data->pre_update = entity_impl_grass_update;
+                data->metadata_size = 0;
+                data->pre_update = NULL;
+                data->post_update = NULL;
                 break;
         }
     }
