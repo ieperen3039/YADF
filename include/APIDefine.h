@@ -12,7 +12,7 @@
 #ifdef YADF_STATIC
 #   define YADF_API extern
 #else
-#    if defined(__WINDOWS__)
+#   if defined(__WINDOWS__)
 #       ifdef YADF_BUILD
 #           define YADF_API extern __declspec(dllexport)
 #       else

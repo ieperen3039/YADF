@@ -8,7 +8,7 @@
 #define TEMPERATURE_LEVEL 1
 #define PRESSURE_LEVEL 3
 
-#include "World.h"
+#include "../World/World.h"
 
 typedef struct _UpdateWorkerPool UpdateWorkerPool;
 

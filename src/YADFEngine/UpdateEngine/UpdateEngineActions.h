@@ -16,7 +16,6 @@
 #define YADF_UPDATEENGINESHARED_H
 
 #include <Entity.h>
-#include "../Entities/EntityInstance.h"
 
 // positions in the same chunk will end up with the same hash
 #define PER_CHUNK_GROUPING
@@ -73,19 +72,6 @@ struct EntityUpdateElt {
     Entity* ety;
     Vector3i* pos;
 };
-
-/**
- * initializes the lists to contain elements of struct EntityUpdateElt.
- * @param lists an array of lists to initialize
- * @param nr_of_lists the number of lists in lists, at least equal to the number of workers
- * @param nr_of_entities the number of entities that will be stored in these lists in total
- */
-void update_init_sort_lists(List* lists, int nr_of_lists, int nr_of_entities) {
-    int capacity = (int) (2.5 * nr_of_entities / nr_of_lists) + 1;
-    for (int i = 0; i < nr_of_lists; ++i) {
-        list_init(&lists[i], sizeof(struct EntityUpdateElt), capacity);
-    }
-}
 
 /**
  * adds all entities to the given lists, such that each tile coordinate is only contained in one list

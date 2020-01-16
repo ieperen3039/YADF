@@ -4,6 +4,7 @@ project(YADF VERSION 0.0 LANGUAGES C)
 set(CMAKE_C_STANDARD 11)
 
 set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH})
+set(YADF_MULTITHREADING TRUE)
 
 include_directories(include)
 

@@ -1,44 +1,33 @@
 //
-// Created by s152717 on 29-12-2019.
+// Created by s152717 on 13-12-2019.
 //
 
-#if _WIN32_WINNT < 0x0501
-    #undef _WIN32_WINNT
-    #define _WIN32_WINNT 0x0600
-#endif
-
 #include "UpdateEngine.h"
-#include "UpdateEngineShared.h"
-#include "../Entities/EntityInstance.h"
-#include "../World/World.h"
-
-#include <process.h>
-#include <windows.h>
+#include "UpdateEngineActions.h"
+#include <stdlib.h>
+#include "Sync.h"
 
 #ifndef WORKER_COUNT
-#define WORKER_COUNT 2
+#define WORKER_COUNT 7
 #endif
-
-#define WAIT_FOR_THREADS
 
 #define BUFFER_SIZE (WORKER_COUNT + 1)
 #define NR_OF_UPDATE_LISTS (WORKER_COUNT * 2)
 #define LISTS_REALLOC_INTERVAL 360000
 
-
 struct _UpdateWorkerPool {
     struct {
-        unsigned long thread_id;
+        pthread_t thread_id;
     } workers[WORKER_COUNT];
 
-    HANDLE loop_limiter;
-    unsigned long dispatch_thread;
-    World* world;
+    sem_t loop_limiter;
+    pthread_t dispatcher;
+    volatile World* world;
 
-    CRITICAL_SECTION lock_buffer;
-    CONDITION_VARIABLE cond_has_space;
-    CONDITION_VARIABLE cond_has_elements;
-    CONDITION_VARIABLE cond_idle_workers;
+    pthread_mutex_t lock_buffer;
+    pthread_cond_t cond_has_space;
+    pthread_cond_t cond_has_elements;
+    pthread_cond_t cond_idle_workers;
 
     volatile enum State state;
     volatile int idle_workers;
@@ -52,20 +41,21 @@ struct _UpdateWorkerPool {
     List update_entities[NR_OF_UPDATE_LISTS]; // only accessed by the dispatcher
 };
 
-void worker_loop(void* worker_pool_ptr) {
+/// callback for pthread_create
+void* worker_loop(void* worker_pool_ptr) {
     UpdateWorkerPool* pool = worker_pool_ptr;
     ListIterator entities;
     UpdateCycle game_time;
 
     while (pool->state != STATE_STOPPING) {
-        EnterCriticalSection(&pool->lock_buffer);
+        pthread_mutex_lock(&pool->lock_buffer);
 
         while (pool->buffer_head == pool->buffer_tail) {
             pool->idle_workers++;
-            WakeConditionVariable(&pool->cond_idle_workers);
+            pthread_cond_signal(&pool->cond_idle_workers);
 
-            SleepConditionVariableCS(&pool->cond_has_elements, &pool->lock_buffer, INFINITE);
-            if (pool->state == STATE_STOPPING) return;
+            pthread_cond_wait(&pool->cond_has_elements, &pool->lock_buffer);
+            if (pool->state == STATE_STOPPING) return NULL;
 
             pool->idle_workers--;
         }
@@ -76,30 +66,30 @@ void worker_loop(void* worker_pool_ptr) {
         entities = pool->buffer[tail];
         pool->buffer_tail = (tail + 1) % BUFFER_SIZE;
 
-        WakeConditionVariable(&pool->cond_has_space);
-        LeaveCriticalSection(&pool->lock_buffer);
+        pthread_cond_signal(&pool->cond_has_space);
+        pthread_mutex_unlock(&pool->lock_buffer);
 
         update(&entities, game_time, state);
     }
 
-    // optional cleanup
+    return NULL;
 }
 
 void sync_workers(UpdateWorkerPool* pool, enum State new_state) {
-    EnterCriticalSection(&pool->lock_buffer);
+    pthread_mutex_lock(&pool->lock_buffer);
     while (pool->idle_workers < WORKER_COUNT) {
-        SleepConditionVariableCS(&pool->cond_idle_workers, &pool->lock_buffer, INFINITE);
+        pthread_cond_wait(&pool->cond_idle_workers, &pool->lock_buffer);
     }
 
     pool->state = new_state;
-    LeaveCriticalSection(&pool->lock_buffer);
+    pthread_mutex_unlock(&pool->lock_buffer);
 }
 
 void dispatch(UpdateWorkerPool* pool, ListIterator batch) {
-    EnterCriticalSection(&pool->lock_buffer);
-
+    pthread_mutex_lock(&pool->lock_buffer);
+    // if necessary, wait until there is space in the buffer
     while (((pool->buffer_head + 1) % BUFFER_SIZE) == pool->buffer_tail) {
-        SleepConditionVariableCS(&pool->cond_has_space, &pool->lock_buffer, INFINITE);
+        pthread_cond_wait(&pool->cond_has_space, &pool->lock_buffer);
     }
 
     // set buffer
@@ -107,13 +97,16 @@ void dispatch(UpdateWorkerPool* pool, ListIterator batch) {
     pool->buffer[head] = batch;
     pool->buffer_head = (head + 1) % BUFFER_SIZE;
 
-    LeaveCriticalSection(&pool->lock_buffer);
-    WakeConditionVariable(&pool->cond_has_elements);
+    pthread_mutex_unlock(&pool->lock_buffer);
+    // signal buffer available
+    pthread_cond_signal(&pool->cond_has_elements);
 }
 
-void update_dispatch(void* data) {
+void* update_dispatch(void* data){
     UpdateWorkerPool* pool = data;
     List entities;
+
+    sem_wait(&pool->loop_limiter);
 
     while (pool->state != STATE_STOPPING) {
         pool->game_time++;
@@ -151,7 +144,7 @@ void update_dispatch(void* data) {
         for (int i = 0; i < NR_OF_UPDATE_LISTS; ++i) {
             List* list_to_update = &pool->update_entities[i];
 
-            if (!list_is_empty(list_to_update)) {
+            if (!list_is_empty(list_to_update)){
                 ListIterator batch = list_iterator(list_to_update);
                 dispatch(pool, batch);
             }
@@ -162,8 +155,10 @@ void update_dispatch(void* data) {
 
         // TODO Unlock frame rendering
 
-        WaitForSingleObject(&pool->loop_limiter, INFINITE);
+        sem_wait(&pool->loop_limiter);
     }
+
+    return NULL;
 }
 
 UpdateWorkerPool* update_workers_new() {
@@ -173,39 +168,32 @@ UpdateWorkerPool* update_workers_new() {
     pool->buffer_tail = 0;
     pool->idle_workers = 0;
 
-    pool->loop_limiter = CreateSemaphore(NULL, 1, 1, NULL);
-    InitializeCriticalSection(&pool->lock_buffer);
-    InitializeConditionVariable(&pool->cond_has_space);
-    InitializeConditionVariable(&pool->cond_has_elements);
-    InitializeConditionVariable(&pool->cond_idle_workers);
+    update_init_sort_lists(pool->update_entities, NR_OF_UPDATE_LISTS, 1000);
 
+    pthread_mutex_init(&pool->lock_buffer, NULL);
+    pthread_cond_init(&pool->cond_has_space, NULL);
+    pthread_cond_init(&pool->cond_has_elements, NULL);
+    pthread_cond_init(&pool->cond_idle_workers, NULL);
 
     for (int i = 0; i < WORKER_COUNT; ++i) {
-        unsigned long thread_handle = _beginthread(worker_loop, 1, pool);
-        assert(thread_handle >= 0);
-        pool->workers[i].thread_id = thread_handle;
+        pthread_create(&pool->workers[i].thread_id, NULL, worker_loop, pool);
     }
 
     sync_workers(pool, STATE_PRE_UPDATE);
+    pthread_create(&pool->dispatcher, NULL, update_dispatch, pool);
 
     return pool;
 }
 
 void update_workers_free(UpdateWorkerPool* pool) {
-    EnterCriticalSection(&pool->lock_buffer);
+    pthread_mutex_lock(&pool->lock_buffer);
     pool->state = STATE_STOPPING;
-    LeaveCriticalSection(&pool->lock_buffer);
+    pthread_cond_broadcast(&pool->cond_has_elements);
+    pthread_mutex_unlock(&pool->lock_buffer);
 
-    WakeAllConditionVariable(&pool->cond_has_elements);
-
-#ifdef WAIT_FOR_THREADS
-    HANDLE handle[WORKER_COUNT];
     for (int i = 0; i < WORKER_COUNT; ++i) {
-        handle[i] = &pool->workers[i].thread_id;
+        pthread_join(pool->workers[i].thread_id, NULL);
     }
-
-    WaitForMultipleObjects(WORKER_COUNT, handle, true, 2000);
-#endif
 
     free(pool);
 }
@@ -213,6 +201,6 @@ void update_workers_free(UpdateWorkerPool* pool) {
 void update_start_tick(UpdateWorkerPool* pool, World* world) {
     pool->world = world;
 
-    WaitForSingleObject(pool->loop_limiter, 0);
-    ReleaseSemaphore(pool->loop_limiter, 1, NULL);
+    sem_trywait(&pool->loop_limiter); // discard standing posts
+    sem_post(&pool->loop_limiter);
 }
