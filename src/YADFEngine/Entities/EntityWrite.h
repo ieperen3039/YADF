@@ -1,9 +1,10 @@
 //
 // Created by s152717 on 27-12-2019.
+// Functions for modifying entities
 //
 
-#ifndef YADF_ENTITYINSTANCE_H
-#define YADF_ENTITYINSTANCE_H
+#ifndef YADF_ENTITYWRITE_H
+#define YADF_ENTITYWRITE_H
 
 #include "Entity.h"
 #include "Structs.h"
@@ -23,11 +24,4 @@
  */
 Entity* entity_new(enum EntityClass type, const void* initial_data);
 
-/**
- * Adds the given entity to the tile
- * @param tile the tile to add this entity's pointer to
- * @param the entity whomst pointer must be added to this list
- */
-void world_tile_add_entity(WorldTileData tile, Entity* entity, WorldChunk* chunk);
-
-#endif //YADF_ENTITYINSTANCE_H
+#endif //YADF_ENTITYWRITE_H

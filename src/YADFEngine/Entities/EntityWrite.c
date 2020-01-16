@@ -2,7 +2,7 @@
 // Created by s152717 on 4-1-2020.
 //
 
-#include "EntityInstance.h"
+#include "EntityWrite.h"
 #include "EntityClass.h"
 #include "Materials.h"
 
@@ -14,7 +14,6 @@ Entity* entity_new(enum EntityClass type, const void* initial_data) {
             class_data->metadata_size
     );
 
-    new_entity->type = type;
     new_entity->class = class_data;
     new_entity->flags = 0;
 
@@ -29,10 +28,4 @@ Entity* entity_new(enum EntityClass type, const void* initial_data) {
     }
 
     return new_entity;
-}
-
-void world_tile_add_entity(WorldTileData tile, Entity* entity, WorldChunk* chunk) {
-    entity->chunk = chunk;
-    entity->position = tile.coord;
-    list_add(&tile.elt->entity_ptrs, &entity);
 }

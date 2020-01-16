@@ -23,7 +23,7 @@ add_library(
         World/WorldGenerator.c
         Entities/EntityClass.c
         Entities/EntityUpdateStatic.c
-        Entities/EntityInstance.c
+        Entities/EntityWrite.c
         World/World.c
 )
 target_compile_definitions(YADFEngine PRIVATE YADF_BUILD)

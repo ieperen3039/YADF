@@ -5,7 +5,7 @@
 #ifndef YADF_WORLDGENERATOR_H
 #define YADF_WORLDGENERATOR_H
 
-#include "../Entities/EntityInstance.h"
+#include "../Entities/EntityWrite.h"
 #include "../External/open-simplex-noise.h"
 #include "EntityImpl.h"
 

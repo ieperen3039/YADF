@@ -191,9 +191,9 @@ void matrix_invert(Matrix4fc* this, Matrix4f* dest);
  *
  * @return the size of the string representation of mat, including null-delimiter.
  */
-static inline int matrix_to_string(Matrix4fc* mat, char* dest, int str_size) {
+static inline int matrix_to_string(char* dest, int max_chars, Matrix4fc* mat) {
     return snprintf( // this took longer than it had to
-            dest, str_size,
+            dest, max_chars,
             "[[%6.03f, %6.03f, %6.03f, %6.03f][%6.03f, %6.03f, %6.03f, %6.03f][%6.03f, %6.03f, %6.03f, %6.03f][%6.03f, %6.03f, %6.03f, %6.03f]]",
             mat->m[0][0], mat->m[1][0], mat->m[2][0], mat->m[3][0],
             mat->m[0][1], mat->m[1][1], mat->m[2][1], mat->m[3][1],

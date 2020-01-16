@@ -40,10 +40,6 @@ YADF_API World* yadf_get_world(YADFEngine* engine) {
     return engine->world;
 }
 
-YADF_API const struct EntityClassData* yadf_get_entity_class(enum EntityClass entity_class) {
-    return entity_class_get(entity_class);
-}
-
 YADF_API void yadf_free(YADFEngine* engine) {
     update_workers_free(engine->workers);
     world_free(engine->world);

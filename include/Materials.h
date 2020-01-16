@@ -7,13 +7,12 @@
 
 #include "global.h"
 
-typedef enum Material Material;
 ENUM( Material ,
     SLATE,
     BASALT
 )
 
-PURE static const char* material_name(Material material){
+PURE static const char* material_name(enum Material material){
     // basically a lookup table
     switch (material){
         case SLATE:

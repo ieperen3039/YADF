@@ -8,10 +8,6 @@ void entity_impl_empty_update(Entity* this, UpdateCycle time) {
 
 }
 
-void entity_impl_grass_apply(Entity* this, Vector3ic* coordinate, WorldTile* tile) {
-
-}
-
-void entity_impl_natural_wall_apply(Entity* this, Vector3ic* coordinate, WorldTile* tile) {
+void entity_impl_no_apply(Entity* this, Vector3ic* coordinate, WorldTile* tile) {
 
 }

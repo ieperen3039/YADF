@@ -1,19 +1,22 @@
 //
 // Created by s152717 on 3-1-2020.
+// some update functions for some entities
 //
+
 #ifndef YADF_ENTITYUPDATESTATIC_H
 #define YADF_ENTITYUPDATESTATIC_H
 
 #include <Entity.h>
+#include <WorldAPI.h>
 
+/**
+ * Pre-update function that does nothing
+ */
 void entity_impl_empty_update(Entity* this, UpdateCycle time);
 
-void entity_impl_grass_apply(Entity* this, Vector3ic* coordinate, WorldTile* tile);
-
-void entity_impl_natural_wall_apply(Entity* this, Vector3ic* coordinate, WorldTile* tile);
-
-//struct EntityImpl# {};
-//void entity_impl_#_update();
-//void entity_impl_#_render();
+/**
+ * post-update function that does nothing
+ */
+void entity_impl_no_apply(Entity* this, Vector3ic* coordinate, WorldTile* tile);
 
 #endif //YADF_ENTITYUPDATESTATIC_H

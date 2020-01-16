@@ -142,10 +142,10 @@ float vector_length(Vector3fc* vec);
  *
  * @return the size of the string representation of vec, including null-delimiter.
  */
-static inline int vector_to_string(Vector3fc* vec, char* dest, int str_size) {
-    return snprintf(dest, str_size,
-                   "(%6.03f, %6.03f, %6.03f)",
-                   vec->x, vec->y, vec->z
+static inline int vector_to_string(char* dest, int max_chars, Vector3fc* vec) {
+    return snprintf(dest, max_chars,
+                    "(%6.03f, %6.03f, %6.03f)",
+                    vec->x, vec->y, vec->z
     );
 }
 

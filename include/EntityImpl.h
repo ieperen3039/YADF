@@ -8,10 +8,15 @@
 #include <Materials.h>
 
 struct EntityImplNaturalWall {
-    Material material;
+    enum Material material;
 };
 
+ENUM( Vegetation,
+    GRASS
+)
+
 struct EntityImplGrass {
+    enum Vegetation type;
 };
 
 #endif //YADF_ENTITYIMPL_H
