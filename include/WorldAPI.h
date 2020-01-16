@@ -106,7 +106,7 @@ typedef struct {
  * @return
  */
 YADF_API WorldDirectionalIterator
-world_directional_iterator(const World* world, const Vector3f* focus, const Vector3f* size, bool x_pos, bool y_pos);
+world_directional_iterator(const World* world, Vector3fc* focus, Vector3fc* size, bool x_pos, bool y_pos);
 
 YADF_API WorldTileData world_directional_iterator_next(WorldDirectionalIterator* itr);
 

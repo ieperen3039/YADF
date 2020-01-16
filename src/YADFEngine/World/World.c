@@ -384,7 +384,7 @@ PURE Vector3i to_int_inflate(const Vector3f* target) {
 }
 
 WorldDirectionalIterator world_directional_iterator(
-        const World* world, const Vector3f* focus, const Vector3f* size, bool x_pos, bool y_pos
+        const World* world, Vector3fc* focus, Vector3fc* size, bool x_pos, bool y_pos
 ) {
     Vector3i origin = to_int_inflate(focus);
     Vector3i size_i = to_int_inflate(size);
