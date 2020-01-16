@@ -1,5 +1,6 @@
 //
 // Created by s152717 on 15-1-2020.
+// maps generic synchronization functions to platform-specific alternatives
 //
 
 #ifndef YADF_SYNC_H
@@ -50,9 +51,9 @@ static inline sync_thread_id sync_new_thread(WorkerFunction func, void* data);
 static inline void sync_lock(sync_mutex* mutex);
 static inline void sync_unlock(sync_mutex* mutex);
 
-static inline void sync_condition_wait(sync_condition* condition, sync_mutex* mutex);
-static inline void sync_condition_signal(sync_condition* condition);
-static inline void sync_condition_broadcast(sync_condition* condition);
+static inline void sync_condition_wait(sync_condition* c, sync_mutex* mutex);
+static inline void sync_condition_signal(sync_condition* c);
+static inline void sync_condition_broadcast(sync_condition* c);
 
 static inline void sync_semaphore_wait(sync_semaphore* sem);
 static inline bool sync_semaphore_trywait(sync_semaphore* sem);
@@ -137,20 +138,37 @@ static inline void sync_semaphore_post(sync_semaphore* s) {
 
 #if defined(__linux__) // TODO
 
-static inline sync_semaphore sync_semaphore_new(int initial_count, int maximum_count);
-static inline sync_mutex sync_mutex_new();
-static inline sync_condition sync_condition_new();
+static inline sync_semaphore sync_semaphore_new(int initial_count, int maximum_count){
+    sem_t semaph;
+    sem_init(&semaph, false, initial_count);
+    return semaph;
+}
+static inline sync_mutex sync_mutex_new(){
+    pthread_mutex_t mutex;
+    pthread_mutex_init(&mutex, NULL);
+    return mutex;
+}
+static inline sync_condition sync_condition_new(){
+    pthread_cond_t condition;
+    pthread_cond_init(&condition, NULL);
+    return condition;
+}
 
-static inline sync_thread_id sync_new_thread(void* data);
+static inline sync_thread_id sync_new_thread(WorkerFunction func, void* data) {
+    pthread_t thread_id;
+    pthread_create(&thread_id, NULL, func, data);
+}
 
-static inline void sync_lock(sync_mutex* mutex);
-static inline void sync_unlock(sync_mutex* mutex);
+static inline void sync_lock(sync_mutex* mutex) {pthread_mutex_lock(mutex);}
+static inline void sync_unlock(sync_mutex* mutex) {pthread_mutex_unlock(mutex);}
 
-static inline void sync_condition_wait(sync_condition* condition, sync_mutex* mutex);
-static inline void sync_condition_signal(sync_condition* condition);
+static inline void sync_condition_wait(sync_condition* c, sync_mutex* mutex){pthread_cond_wait(c, mutex);}
+static inline void sync_condition_signal(sync_condition* c){pthread_cond_signal(c);}
+static inline void sync_condition_broadcast(sync_condition* c){pthread_cond_broadcast(c);}
 
-static inline void sync_semaphore_wait(sync_semaphore* s);
-static inline void sync_semaphore_post(sync_semaphore* s);
+static inline void sync_semaphore_wait(sync_semaphore* sem) {sem_wait(sem);}
+static inline bool sync_semaphore_trywait(sync_semaphore* sem) {sem_trywait(sem);}
+static inline void sync_semaphore_post(sync_semaphore* sem) {sem_post(sem);}
 
 #endif
 

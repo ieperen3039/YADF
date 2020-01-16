@@ -26,4 +26,6 @@ YADF_API void yadf_trigger_loop_update(YADFEngine* engine);
 
 YADF_API void yadf_free(YADFEngine* engine);
 
+YADF_API const struct EntityClassData* yadf_get_entity_class(enum EntityClass entity_class);
+
 #endif //YADF_YADFENGINE_H

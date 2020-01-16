@@ -7,19 +7,19 @@
 #include <EntityImpl.h>
 
 static inline void draw_entity(Shader* shader, const Entity* entity, const Color4f* material_map, const Sprite** entity_sprites) {
-    switch (entity->type) {
+    switch (entity->class->type) {
         case NATURAL_WALL: {
             struct EntityImplNaturalWall* data = entity->entity_data;
             Color4f color = material_map[data->material];
             shader_set_color(shader, 0, color);
             break;
         }
-        case GRASS:
+        case VEGETATION_PATCH:
         case CREATURE:
             break;
     }
 
-    sprite_draw(entity_sprites[entity->type], shader);
+    sprite_draw(entity_sprites[entity->class->type], shader);
 }
 
 void render_frame(Shader* shader, World* world, const Vector3f* eye, const Color4f* material_map,

@@ -30,6 +30,7 @@ enum State{
  * @param list will contain the entities to update
  */
 void update_move_entities(World* world, List* list) {
+    assert(world != NULL && list != NULL);
     List* src_list = world_get_entities_to_update(world);
     list_free(list);
     list_init(list, src_list->_element_size, WORLD_DEFAULT_ENTITY_LIST_CAPACITY);

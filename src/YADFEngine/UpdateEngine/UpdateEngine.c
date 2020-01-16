@@ -103,6 +103,8 @@ void* update_dispatch(void* data) {
     UpdateWorkerPool* pool = data;
     List entities;
 
+    sync_semaphore_wait(&pool->loop_limiter);
+
     while (pool->state != STATE_STOPPING) {
         pool->game_time++;
         update_move_entities(pool->world, &entities);
@@ -163,7 +165,7 @@ UpdateWorkerPool* update_workers_new() {
     pool->buffer_tail = 0;
     pool->idle_workers = 0;
 
-    pool->loop_limiter = sync_semaphore_new(1, 1);
+    pool->loop_limiter = sync_semaphore_new(0, 1);
     pool->lock_buffer = sync_mutex_new();
     pool->cond_has_space = sync_condition_new();
     pool->cond_has_elements = sync_condition_new();

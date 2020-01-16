@@ -170,7 +170,7 @@ void json_read_material(Color4f* material_colors, cJSON* elt) {
         }
 
         for (int i = 0; i < MaterialSize; ++i) {
-            Material mat = MaterialValues[i];
+            enum Material mat = MaterialValues[i];
 
             if (tool_case_insensitive_strcmp(material_name(mat), name) == 0) {
                 material_colors[i] = color;

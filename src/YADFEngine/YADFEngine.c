@@ -32,6 +32,10 @@ YADF_API YADFEngine* yadf_init() {
     return engine;
 }
 
+const struct EntityClassData* yadf_get_entity_class(enum EntityClass entity_class) {
+    return entity_class_get(entity_class);
+}
+
 YADF_API void yadf_trigger_loop_update(YADFEngine* engine) {
     update_start_tick(engine->workers, engine->world);
 }
