@@ -5,7 +5,6 @@
 #define YADF_TOOLS_C
 
 #include "global.h"
-#include "DataStructures/Map.h"
 
 #include <stdio.h>
 #include <errno.h>

@@ -42,11 +42,17 @@ typedef pthread_t sync_thread_id;
 
 typedef void* (*WorkerFunction)(void* data);
 
+/**
+ * Create a new thread, which runs the given function with the given data as only parameter.
+ * @param func the function that this function executes. If this function exits, the thread is disposed
+ * @param data the parameter for func
+ * @return a thread identifier. Has no uses yet.
+ */
+static inline sync_thread_id sync_new_thread(WorkerFunction func, void* data);
+
 static inline sync_semaphore sync_semaphore_new(int initial_count, int maximum_count);
 static inline sync_mutex sync_mutex_new(void);
 static inline sync_condition sync_condition_new(void);
-
-static inline sync_thread_id sync_new_thread(WorkerFunction func, void* data);
 
 static inline void sync_lock(sync_mutex* mutex);
 static inline void sync_unlock(sync_mutex* mutex);
@@ -58,7 +64,6 @@ static inline void sync_condition_broadcast(sync_condition* c);
 static inline void sync_semaphore_wait(sync_semaphore* sem);
 static inline bool sync_semaphore_trywait(sync_semaphore* sem);
 static inline void sync_semaphore_post(sync_semaphore* sem);
-
 
 #if defined(__WINDOWS__)
 

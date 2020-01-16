@@ -14,12 +14,7 @@
 #define NR_OF_UPDATE_LISTS (WORKER_COUNT * 2)
 
 struct _UpdateWorkerPool {
-    struct {
-        sync_thread_id thread_id;
-    } workers[WORKER_COUNT];
-
     sync_semaphore loop_limiter;
-    sync_thread_id dispatch_thread;
     World* world;
 
     sync_mutex lock_buffer;
@@ -28,7 +23,7 @@ struct _UpdateWorkerPool {
     sync_condition cond_idle_workers;
 
     volatile enum State state;
-    volatile int idle_workers;
+    volatile int idle_workers; // waiting or stopped
 
     volatile int buffer_head;
     volatile int buffer_tail;
@@ -41,7 +36,7 @@ struct _UpdateWorkerPool {
 
 void* worker_function(void* worker_pool_ptr) {
     UpdateWorkerPool* pool = worker_pool_ptr;
-    ListIterator entities;
+    ListIterator task_data;
     UpdateCycle game_time;
 
     while (pool->state != STATE_STOPPING) {
@@ -52,7 +47,12 @@ void* worker_function(void* worker_pool_ptr) {
             sync_condition_signal(&pool->cond_idle_workers);
 
             sync_condition_wait(&pool->cond_has_elements, &pool->lock_buffer);
-            if (pool->state == STATE_STOPPING) return NULL;
+
+            if (pool->state == STATE_STOPPING) {
+                // thread stops as idle, and should return all locks
+                sync_unlock(&pool->lock_buffer);
+                return NULL;
+            }
 
             pool->idle_workers--;
         }
@@ -60,26 +60,38 @@ void* worker_function(void* worker_pool_ptr) {
         game_time = pool->game_time;
         enum State state = pool->state;
         int tail = pool->buffer_tail;
-        entities = pool->buffer[tail];
+        task_data = pool->buffer[tail];
         pool->buffer_tail = (tail + 1) % BUFFER_SIZE;
 
         sync_condition_signal(&pool->cond_has_space);
         sync_unlock(&pool->lock_buffer);
 
-        update(&entities, game_time, state);
+        update(&task_data, game_time, state);
     }
 
-    // optional cleanup
+    // a stopped thread is an idle thread
+    pool->idle_workers++;
+    sync_condition_signal(&pool->cond_idle_workers);
+
     return NULL;
 }
 
+/**
+ * Wait until all workers in the given pool are in idle state. This non-idle workers.
+ * More specifically, it waits until @code pool->idle_workers @endcode is set to WORKER_COUNT
+ * @param pool the worker pool to wait for
+ * @param new_state the state upon exit, unless STATE_STOPPING has been set
+ */
 void synchronize_workers(UpdateWorkerPool* pool, enum State new_state) {
     sync_lock(&pool->lock_buffer);
     while (pool->idle_workers < WORKER_COUNT) {
         sync_condition_wait(&pool->cond_idle_workers, &pool->lock_buffer);
     }
 
-    pool->state = new_state;
+    if (pool->state != STATE_STOPPING){
+        pool->state = new_state;
+    }
+
     sync_unlock(&pool->lock_buffer);
 }
 
@@ -155,6 +167,10 @@ void* update_dispatch(void* data) {
         sync_semaphore_wait(&pool->loop_limiter);
     }
 
+    // this ensures that iff (idle_workers > WORKER_COUNT) then all threads are stopped
+    pool->idle_workers++;
+    sync_condition_signal(&pool->cond_idle_workers);
+
     return NULL;
 }
 
@@ -176,12 +192,12 @@ UpdateWorkerPool* update_workers_new() {
     }
 
     for (int i = 0; i < WORKER_COUNT; ++i) {
-        pool->workers[i].thread_id = sync_new_thread(worker_function, pool);
+        sync_new_thread(worker_function, pool);
     }
 
     synchronize_workers(pool, STATE_PRE_UPDATE);
 
-    pool->dispatch_thread = sync_new_thread(update_dispatch, pool);
+    sync_new_thread(update_dispatch, pool);
 
     return pool;
 }
@@ -191,7 +207,16 @@ void update_workers_free(UpdateWorkerPool* pool) {
     pool->state = STATE_STOPPING;
     sync_unlock(&pool->lock_buffer);
 
+    // wake all threads waiting for tasks
     sync_condition_broadcast(&pool->cond_has_elements);
+
+    // wait until all threads are stopped
+    // iff (idle_workers > WORKER_COUNT) then all threads are stopped
+    sync_lock(&pool->lock_buffer);
+    while (pool->idle_workers <= WORKER_COUNT) {
+        sync_condition_wait(&pool->cond_idle_workers, &pool->lock_buffer);
+    }
+    sync_unlock(&pool->lock_buffer);
 
     free(pool);
 }

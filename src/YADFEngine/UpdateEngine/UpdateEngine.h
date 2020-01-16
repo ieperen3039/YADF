@@ -25,7 +25,8 @@ UpdateWorkerPool* update_workers_new(void);
 void update_workers_free(UpdateWorkerPool* pool);
 
 /**
- * Starts a single update. This method must be called by the render thread, to allow synchronization
+ * Starts a single update.
+ * This method must be called by the render thread, to allow synchronization.
  * @param world the world to update
  * @param game_time the current game time
  * @param pool the available workers

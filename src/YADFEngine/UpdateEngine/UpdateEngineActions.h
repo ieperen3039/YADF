@@ -1,6 +1,5 @@
 //
 // Created by ieperen3039 on 07-01-20.
-// TODO look into using https://github.com/bjoernknafla/amp
 
 // (once): await loop trigger
 // (once): lock callbacks
@@ -18,7 +17,7 @@
 #include <Entity.h>
 
 // positions in the same chunk will end up with the same hash
-#define PER_CHUNK_GROUPING
+//#define PER_CHUNK_GROUPING
 
 enum State{
     STATE_STOPPING, STATE_PRE_UPDATE, STATE_POST_UPDATE
@@ -52,11 +51,15 @@ void update_entities_pre(ListIterator* entities, UpdateCycle game_time) {
 }
 
 /// a biased hashing function for grouping coordinates
-int coordinate_hash(Vector3i pos) {
+PURE int coordinate_hash(Vector3i pos) {
 #ifdef PER_CHUNK_GROUPING
-    int xh = pos.x >> CHUNK_COORD_BITS;
-    int yh = pos.y >> CHUNK_COORD_BITS;
-    int zh = pos.z >> CHUNK_COORD_BITS;
+    const int xh = pos.x >> CHUNK_COORD_BITS;
+    const int yh = pos.y >> CHUNK_COORD_BITS;
+    const int zh = pos.z >> CHUNK_COORD_BITS;
+#else
+    const int xh = pos.x;
+    const int yh = pos.y;
+    const int zh = pos.z;
 #endif
 
     int result = 31;
