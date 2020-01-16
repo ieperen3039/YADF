@@ -6,6 +6,7 @@
 #define YADF2_WORLD_H
 
 #include "WorldAPI.h"
+typedef struct _Entity Entity;
 
 #define WORLD_DEFAULT_ENTITY_LIST_CAPACITY 256
 
@@ -36,5 +37,12 @@ int world_initialize_area(World* world, const BoundingBox area, const WorldTile 
 PURE List* world_get_entities_to_update(World* world);
 
 void world_tile_init(WorldTile* base_tile, char flags);
+
+/**
+ * Adds the given entity to the tile
+ * @param tile the tile to add this entity's pointer to
+ * @param the entity whomst pointer must be added to this list
+ */
+void world_tile_add_entity(WorldTileData tile, Entity* entity, WorldChunk* chunk);
 
 #endif //YADF2_WORLD_H

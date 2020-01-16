@@ -39,6 +39,7 @@ YADF_API PURE WorldTile* world_get_tile_from_chunk(WorldChunk* chunk, Vector3ic*
 typedef struct {
     WorldQuadrant* targetQuad;
     BoundingBox bounds;
+    Vector3i zero;
     Vector3i focus;
 } WorldChunkIterator;
 
@@ -62,9 +63,8 @@ YADF_API bool world_chunk_iterator_has_next(WorldChunkIterator* itr);
 
 typedef struct {
     Vector3i chunk_pos;
-    Vector3i tile_pos;
-    WorldTile* data;
-    int index;
+    Vector3i tile_in_chunk_pos;
+    WorldChunk* chunk;
 } WorldTileIterator;
 
 /** creates an iterator to query all tiles in a chunk, with their respective coordinate */

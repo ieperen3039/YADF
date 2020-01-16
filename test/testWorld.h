@@ -73,7 +73,8 @@ void test_world_iterator(CuTest* tc) {
     // mark specific flags
     size_t num_positions = sizeof(positions) / sizeof(Vector3i);
     for (int i = 0; i < num_positions; i++) {
-        world_get_tile(world, &positions[i])->flags |= TILE_FLAG_OPAQUE;
+        WorldTile* tile = world_get_tile(world, &positions[i]);
+        tile->flags |= TILE_FLAG_OPAQUE;
     }
 
     WorldChunkIterator itr = world_get_chunk_iterator(world, area);
@@ -83,13 +84,13 @@ void test_world_iterator(CuTest* tc) {
         CuAssertIntEquals(tc, chunk.elt->zero_pos.x, chunk.coord.x);
         CuAssertIntEquals(tc, chunk.elt->zero_pos.y, chunk.coord.y);
         CuAssertIntEquals(tc, chunk.elt->zero_pos.z, chunk.coord.z);
-        LOG_INFO_F("Chunk : (%d, %d, %d)", chunk.coord.x, chunk.coord.y, chunk.coord.z);
 
         WorldTileIterator itr2 = chunk_get_tile_iterator(chunk.elt);
         while (chunk_tile_iterator_has_next(&itr2)) {
             WorldTileData tile = chunk_tile_iterator_next(&itr2);
+            WorldTile* elt = tile.elt;
 
-            CuAssert(tc, "Tile has been returned twice", !(tile.elt->flags & TILE_FLAG_DISCOVERED));
+            CuAssert(tc, "Tile has been returned twice", !(elt->flags & TILE_FLAG_DISCOVERED));
 
             // check specific tiles
             bool has_found = false;
@@ -98,18 +99,18 @@ void test_world_iterator(CuTest* tc) {
                         positions[i].x == tile.coord.x &&
                         positions[i].y == tile.coord.y &&
                         positions[i].z == tile.coord.z
-                        ) {
-                    CuAssertIntEquals(tc, TILE_FLAG_VISIBLE | TILE_FLAG_OPAQUE, tile.elt->flags);
+                ) {
+                    CuAssertIntEquals(tc, TILE_FLAG_VISIBLE | TILE_FLAG_OPAQUE, elt->flags);
                     has_found = true;
                 }
             }
 
             if (!has_found) {
-                CuAssertIntEquals(tc, TILE_FLAG_VISIBLE, tile.elt->flags);
+                CuAssertIntEquals(tc, TILE_FLAG_VISIBLE, elt->flags);
             }
 
             // mark tile
-            tile.elt->flags |= TILE_FLAG_DISCOVERED;
+            elt->flags |= TILE_FLAG_DISCOVERED;
         }
     }
 

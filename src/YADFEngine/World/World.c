@@ -6,9 +6,7 @@
 #include "../DataStructures/StaticMonoAllocator.h"
 #include <assert.h>
 #include <WorldAPI.h>
-
-
-struct _Entity;
+#include <Entity.h>
 
 struct _WorldQuadrant {
     Vector3i middle_pos; // coordinate of center, as the negative corner of tile (0, 0, 0))
@@ -106,9 +104,9 @@ PURE static inline int get_quad_index(WorldQuadrant* parent, Vector3ic* coord) {
     assert(parent != NULL);
     Vector3i o = parent->middle_pos;
     int index = 0;
-    if (coord->x > o.x) index |= 1;
-    if (coord->y > o.y) index |= 2;
-    if (coord->z > o.z) index |= 4;
+    if (coord->x >= o.x) index |= 1;
+    if (coord->y >= o.y) index |= 2;
+    if (coord->z >= o.z) index |= 4;
     return index;
 }
 
@@ -144,7 +142,15 @@ WorldTile* get_tile_under_quad(WorldQuadrant* quadrant, Vector3ic* coord) {
     assert(quad_contains(quadrant, *coord));
     WorldChunk* chunk = get_chunk_under_quad(quadrant, coord, NULL);
 
-    return &(chunk->grid[coord->x % CHUNK_LENGTH][coord->y % CHUNK_LENGTH][coord->z % CHUNK_LENGTH]);
+    int xRem = coord->x % CHUNK_LENGTH;
+    int yRem = coord->y % CHUNK_LENGTH;
+    int zRem = coord->z % CHUNK_LENGTH;
+    // correct for negative
+    if (xRem < 0) xRem += CHUNK_LENGTH;
+    if (yRem < 0) yRem += CHUNK_LENGTH;
+    if (zRem < 0) zRem += CHUNK_LENGTH;
+
+    return &(chunk->grid[xRem][yRem][zRem]);
 }
 
 /**
@@ -167,43 +173,46 @@ WorldQuadrant* get_quad_from_quad(WorldQuadrant* quadrant, Vector3ic* tgtCoord, 
     return get_quad_under_quad(quadrant, tgtCoord, quad_allocator);
 }
 
-WorldChunkIterator world_get_chunk_iterator(World* world, BoundingBox box) {
-    return (WorldChunkIterator) {world->chunks, box, (Vector3i) {box.xMin, box.yMin, box.zMin}};
-}
-
 /** @return the zero_pos of the chunk containing the given world coordinate */
-Vector3i chunk_get_zero(Vector3i* tile_coord){
+Vector3i chunk_get_zero(Vector3i* tile_coord) {
     int xRem = tile_coord->x % CHUNK_LENGTH;
     int yRem = tile_coord->y % CHUNK_LENGTH;
     int zRem = tile_coord->z % CHUNK_LENGTH;
-
+    // correct for negative
     if (xRem < 0) xRem += CHUNK_LENGTH;
     if (yRem < 0) yRem += CHUNK_LENGTH;
     if (zRem < 0) zRem += CHUNK_LENGTH;
 
-    return (Vector3i){
-        (tile_coord->x - xRem),
-        (tile_coord->y - yRem),
-        (tile_coord->z - zRem)
+    return (Vector3i) {
+            (tile_coord->x - xRem),
+            (tile_coord->y - yRem),
+            (tile_coord->z - zRem)
     };
 }
 
-WorldChunkData world_chunk_iterator_next(WorldChunkIterator* itr) {
-    Vector3i zeroPos = chunk_get_zero(&itr->focus);
+WorldChunkIterator world_get_chunk_iterator(World* world, BoundingBox box) {
+    Vector3i zeroPos = (Vector3i) {box.xMin, box.yMin, box.zMin};
+    zeroPos = chunk_get_zero(&zeroPos);
+    return (WorldChunkIterator) {world->chunks, box, zeroPos, zeroPos};
+}
 
-    // update focus
+WorldChunkData world_chunk_iterator_next(WorldChunkIterator* itr) {
+    Vector3i zeroPos = itr->focus;
+
     itr->focus.x += CHUNK_LENGTH;
     if (itr->focus.x > itr->bounds.xMax) {
-        itr->focus.x = itr->bounds.xMin;
+        itr->focus.x = itr->zero.x;
         itr->focus.y += CHUNK_LENGTH;
         if (itr->focus.y > itr->bounds.yMax) {
-            itr->focus.y = itr->bounds.yMin;
+            itr->focus.y = itr->zero.y;
             itr->focus.z += CHUNK_LENGTH;
         }
     }
 
     WorldQuadrant* new_quad = get_quad_from_quad(itr->targetQuad, &zeroPos, NULL);
-    if (new_quad == NULL) return (WorldChunkData) {NULL, zeroPos};
+    if (new_quad == NULL) {
+        return (WorldChunkData) {NULL, zeroPos};
+    }
 
     int chunk_index = get_quad_index(new_quad, &zeroPos);
     WorldChunk* pChunk = new_quad->leaves[chunk_index];
@@ -213,36 +222,38 @@ WorldChunkData world_chunk_iterator_next(WorldChunkIterator* itr) {
 }
 
 PURE bool world_chunk_iterator_has_next(WorldChunkIterator* itr) {
-    return itr->focus.z < itr->bounds.zMax;
+    return itr->focus.z <= itr->bounds.zMax;
 }
 
 PURE WorldTileIterator chunk_get_tile_iterator(WorldChunk* chunk) {
     assert(chunk != NULL);
     return (WorldTileIterator) {
-            chunk->zero_pos, chunk->zero_pos, chunk->tiles, 0
+            chunk->zero_pos, (Vector3i) {0, 0, 0}, chunk
     };
 }
 
 WorldTileData chunk_tile_iterator_next(WorldTileIterator* itr) {
-    int i = itr->index++;
-    WorldTile* tile = &(itr->data[i]);
-    WorldTileData data = {tile, itr->tile_pos};
+    Vector3i pos = itr->tile_in_chunk_pos;
 
-    itr->tile_pos.x++;
-    if (itr->tile_pos.x > CHUNK_LENGTH) {
-        itr->tile_pos.x = itr->chunk_pos.x;
-        itr->tile_pos.y++;
-        if (itr->tile_pos.y > CHUNK_LENGTH) {
-            itr->tile_pos.y = itr->chunk_pos.y;
-            itr->tile_pos.z++;
+    itr->tile_in_chunk_pos.x++;
+    if (itr->tile_in_chunk_pos.x >= CHUNK_LENGTH) {
+        itr->tile_in_chunk_pos.x = 0;
+        itr->tile_in_chunk_pos.y++;
+        if (itr->tile_in_chunk_pos.y >= CHUNK_LENGTH) {
+            itr->tile_in_chunk_pos.y = 0;
+            itr->tile_in_chunk_pos.z++;
         }
     }
+
+    Vector3i chunkPos = itr->chunk_pos;
+    WorldTile* tile = &(itr->chunk->grid[pos.x][pos.y][pos.z]);
+    WorldTileData data = {tile, {pos.x + chunkPos.x, pos.y + chunkPos.y, pos.z + chunkPos.z}};
 
     return data;
 }
 
 PURE bool chunk_tile_iterator_has_next(WorldTileIterator* itr) {
-    return itr->index < (CHUNK_LENGTH * CHUNK_LENGTH * CHUNK_LENGTH);
+    return itr->tile_in_chunk_pos.z < CHUNK_LENGTH;
 }
 
 PURE WorldChunk* get_chunk_from_quad(WorldQuadrant* quadrant, Vector3ic* coord, AllocatorSM* allocator) {
@@ -442,7 +453,7 @@ WorldTileData world_directional_iterator_next(WorldDirectionalIterator* itr) {
     return tile_data;
 }
 
-WorldTile* world_get_tile(World* world, Vector3i* coord){
+WorldTile* world_get_tile(World* world, Vector3i* coord) {
     return get_tile_under_quad(world->chunks, coord);
 }
 
@@ -453,4 +464,10 @@ bool world_directional_iterator_has_next(WorldDirectionalIterator* itr) {
 void world_tile_init(WorldTile* base_tile, char flags) {
     base_tile->flags = flags;
     list_init(&base_tile->entity_ptrs, sizeof(void*), 0);
+}
+
+void world_tile_add_entity(WorldTileData tile, Entity* entity, WorldChunk* chunk) {
+    entity->chunk = chunk;
+    entity->position = tile.coord;
+    list_add(&tile.elt->entity_ptrs, &entity);
 }
