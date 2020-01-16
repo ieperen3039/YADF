@@ -173,9 +173,13 @@ WorldChunkIterator world_get_chunk_iterator(World* world, BoundingBox box) {
 
 /** @return the zero_pos of the chunk containing the given world coordinate */
 Vector3i chunk_get_zero(Vector3i* tile_coord){
-    const int xRem = tile_coord->x % CHUNK_LENGTH;
-    const int yRem = tile_coord->y % CHUNK_LENGTH;
-    const int zRem = tile_coord->z % CHUNK_LENGTH;
+    int xRem = tile_coord->x % CHUNK_LENGTH;
+    int yRem = tile_coord->y % CHUNK_LENGTH;
+    int zRem = tile_coord->z % CHUNK_LENGTH;
+
+    if (xRem < 0) xRem += CHUNK_LENGTH;
+    if (yRem < 0) yRem += CHUNK_LENGTH;
+    if (zRem < 0) zRem += CHUNK_LENGTH;
 
     return (Vector3i){
         (tile_coord->x - xRem),

@@ -79,6 +79,7 @@ void test_world_iterator(CuTest* tc) {
     WorldChunkIterator itr = world_get_chunk_iterator(world, area);
     while (world_chunk_iterator_has_next(&itr)) {
         WorldChunkData chunk = world_chunk_iterator_next(&itr);
+        CuAssertPtrNotNull(tc, chunk.elt);
         CuAssertIntEquals(tc, chunk.elt->zero_pos.x, chunk.coord.x);
         CuAssertIntEquals(tc, chunk.elt->zero_pos.y, chunk.coord.y);
         CuAssertIntEquals(tc, chunk.elt->zero_pos.z, chunk.coord.z);
