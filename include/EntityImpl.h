@@ -21,4 +21,8 @@ struct EntityImplGrass {
     enum Vegetation type;
 };
 
+struct EntityImplBoid {
+    unsigned int id;
+};
+
 #endif //YADF_ENTITYIMPL_H

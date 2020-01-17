@@ -16,7 +16,7 @@ typedef struct _WorldChunk WorldChunk;
 ENUM( EntityClass,
      NATURAL_WALL,
      VEGETATION_PATCH,
-     CREATURE,
+     BOID, // it is like a bird, but then more irish
 )
 
 enum DescriptionLength {

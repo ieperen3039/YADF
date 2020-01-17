@@ -7,6 +7,7 @@
 #include "EntityDerivations/NaturalWall.h"
 #include "EntityDerivations/VegetationPatch.h"
 #include "EntityDerivations/Template.h"
+#include "EntityDerivations/Boid.h"
 
 struct EntityClassData type_data[ENUM_SIZE(EntityClass)] = {}; // initialize NULL
 bool is_init = false;
@@ -49,14 +50,14 @@ void entity_class_init() {
                 data->post_update = entity_impl_empty_apply;
                 break;
 
-            case CREATURE:
-                data->name = "creature";
+            case BOID:
+                data->name = "boid";
                 data->plural_postfix = "s";
-                data->description = "living being";
-                data->metadata_size = 0;
-                data->append_description = entity_impl_template_description;
-                data->pre_update = entity_impl_empty_update;
-                data->post_update = entity_impl_empty_apply;
+                data->description = "<debug object>";
+                data->metadata_size = sizeof(struct EntityImplBoid);
+                data->append_description = entity_impl_boid_description;
+                data->pre_update = entity_impl_boid_update;
+                data->post_update = entity_impl_boid_apply;
                 break;
         }
 
