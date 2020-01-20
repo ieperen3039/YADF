@@ -22,10 +22,9 @@ add_library(
         Entities/Fluids.c
         World/WorldGenerator.c
         Entities/EntityClass.c
-        Entities/EntityUpdateStatic.c
         Entities/EntityWrite.c
         World/World.c
-)
+        Entities/EntityRead.c Entities/EntityRead.h)
 target_compile_definitions(YADFEngine PRIVATE YADF_BUILD)
 
 
