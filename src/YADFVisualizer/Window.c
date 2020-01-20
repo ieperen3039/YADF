@@ -129,7 +129,7 @@ void visualizer_draw_frame(Visualizer* vis, World* world) {
     int window_height;
     glfwGetWindowSize(vis->window, &window_width, &window_height);
 
-    // TODO: GL_COLOR_BUFFER_BIT can be removed
+    // TODO: GL_COLOR_BUFFER_BIT can be removed (as soon as magenta doesn't show up)
     glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     glViewport(0, 0, window_width, window_height);
 

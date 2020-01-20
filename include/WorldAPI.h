@@ -86,27 +86,30 @@ YADF_API bool chunk_tile_iterator_has_next(WorldTileIterator* itr);
 typedef struct {
     const World* world;
     WorldQuadrant* quad;
-    Vector3ic origin;
-    Vector3ic size;
-    int xSteps;
-    int ySteps;
-    int zSteps;
-    const bool xp, yp;
-    bool isSecondary;
+    Vector3i current;
+    int x_sub_y_min;
+    int x_sub_y_max;
+    int x_add_y_min;
+    int x_add_y_max;
+    const int z_min;
+    const bool xp, yp; // iteration direction per dimension is positive? (z is always false)
 } WorldDirectionalIterator;
 
 /**
+ *
  * an iterator specifically to iterate through an architectural perspective
  * @param world the world to query the tiles from
  * @param focus the middle of the are to iterate
- * @param size the relative width and height of the area to iterate
+ * @param width number of tiles returned in width
+ * @param height number of tiles returned in depth
  * @param x_pos if true, iterate x in positive direction. if false, iterate x in negative direction
  * @param y_pos if true, iterate y in positive direction. if false, iterate y in negative direction
- * @param cutoff_z z-values above this level are not returned
+ * @param z_min the minimum z value to return
  * @return
  */
 YADF_API WorldDirectionalIterator
-world_directional_iterator(const World* world, Vector3fc* focus, Vector3fc* size, bool x_pos, bool y_pos);
+world_directional_iterator(const World* world, Vector3fc* focus, float width, float height, bool x_pos, bool y_pos,
+                           int z_min);
 
 YADF_API WorldTileData world_directional_iterator_next(WorldDirectionalIterator* itr);
 

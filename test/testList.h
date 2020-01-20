@@ -11,10 +11,10 @@
 #include "../src/YADFEngine/DataStructures/StaticMonoAllocator.h"
 #include <limits.h>
 
-AllocatorSM* alloc_world;
+AllocatorSM* list_allocator;
 
 List* new_list() {
-    List* list = allocator_sm_alloc(alloc_world);
+    List* list = allocator_sm_alloc(list_allocator);
     assert(list != NULL);
     return list_init(list, sizeof(TYPE), 16);
 }
@@ -32,6 +32,7 @@ void test_list_add_get(CuTest* tc) {
 
     CuAssertIntEquals(tc, 3, list_get_size(list));
 
+    list_free(list);
 }
 
 void test_list_set(CuTest* tc) {
@@ -58,6 +59,8 @@ void test_list_set(CuTest* tc) {
     CuAssertPtrEquals(tc, NULL, list_get_checked(list, -1));
     CuAssertPtrEquals(tc, NULL, list_get_checked(list, INT_MAX));
     CuAssertPtrEquals(tc, NULL, list_get_checked(list, INT_MIN));
+
+    list_free(list);
 }
 
 void test_list_get_checked(CuTest* tc) {
@@ -68,6 +71,8 @@ void test_list_get_checked(CuTest* tc) {
     CuAssertDblEquals(tc, elements[1], *((TYPE*) list_get_checked(list, 1)), 0);
     CuAssertPtrEquals(tc, NULL, list_get_checked(list, 2));
     CuAssertPtrEquals(tc, NULL, list_get_checked(list, 3));
+
+    list_free(list);
 }
 
 void test_list_delete_index(CuTest* tc) {
@@ -89,6 +94,8 @@ void test_list_delete_index(CuTest* tc) {
     list_add(list, &elements[4]);
     CuAssertDblEquals(tc, elements[4], *((TYPE*) list_get_checked(list, 3)), 0);
     CuAssertIntEquals(tc, 4, list_get_size(list));
+
+    list_free(list);
 }
 
 void test_list_find(CuTest* tc) {
@@ -105,6 +112,8 @@ void test_list_find(CuTest* tc) {
     ErrorCode ec = list_set(list, 2, &elements[4]);
     CuAssertIntEquals(tc, ERROR_NONE, ec);
     CuAssertIntEquals(tc, 2, list_find_index(list, &elements[4]));
+
+    list_free(list);
 }
 
 void test_list_delete_value(CuTest* tc) {
@@ -122,6 +131,8 @@ void test_list_delete_value(CuTest* tc) {
     CuAssertDblEquals(tc, elements[3], *((TYPE*) list_get_checked(list, 2)), 0);
     CuAssertPtrEquals(tc, NULL, list_get_checked(list, 3));
     CuAssertIntEquals(tc, 3, list_get_size(list));
+
+    list_free(list);
 }
 
 void test_list_pop_push(CuTest* tc) {
@@ -140,6 +151,8 @@ void test_list_pop_push(CuTest* tc) {
 
     CuAssertPtrEquals(tc, NULL, list_get_checked(list, 2));
     CuAssertDblEquals(tc, elements[1], *((TYPE*) list_get_checked(list, 1)), 0);
+
+    list_free(list);
 }
 
 void test_list_iterators(CuTest* tc) {
@@ -170,6 +183,8 @@ void test_list_iterators(CuTest* tc) {
     CuAssertDblEquals(tc, elements[3], *((TYPE*) list_get_checked(list, 3)), 0);
     CuAssertPtrEquals(tc, NULL, list_get_checked(list, 4));
     CuAssertIntEquals(tc, 4, list_get_size(list));
+
+    list_free(list);
 }
 
 void test_list_pack(CuTest* tc) {
@@ -200,6 +215,8 @@ void test_list_pack(CuTest* tc) {
     _list_grow_capacity(list, 6);
 
     CuAssertTrue(tc, list_get_data_size(list) > data_size_after_pack);
+
+    list_free(list);
 }
 
 void test_list_zero(CuTest* tc) {
@@ -302,7 +319,7 @@ void test_list_empty(CuTest* tc) {
 
 CuSuite* list_suite(void) {
     CuSuite* suite = CuSuiteNew();
-    alloc_world = allocator_sm_new(sizeof(List));
+    list_allocator = allocator_sm_new(sizeof(List));
 
     SUITE_ADD_TEST(suite, test_list_add_get);
     SUITE_ADD_TEST(suite, test_list_set);
@@ -319,7 +336,7 @@ CuSuite* list_suite(void) {
 }
 
 void list_cleanup() {
-    allocator_sm_free(alloc_world);
+    allocator_sm_free(list_allocator);
 }
 
 #endif //YADF_TESTLIST_H

@@ -269,7 +269,7 @@ static inline void list_copy(const List* src, List* dest) {
 /**
  * Creates an iterator object for this list. Objects can be iterated through by list_iterator_next(ListIterator).
  * Any change to the size of this list invalidates this iterator, and using list_iterator_next after changes results in undefined behaviour.
- * This is likely to be faster than iterating over the index.
+ * This may or may not be faster than iterating over the index, due to compiler optimizations.
  */
 PURE static inline ListIterator list_iterator(const List* list) {
     return (ListIterator) {

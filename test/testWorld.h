@@ -6,6 +6,7 @@
 #define YADF_TESTWORLD_H
 
 #include "CuTest.h"
+#include "CuExtra.h"
 
 #define YADF_STATIC
 
@@ -19,9 +20,9 @@
 
 void test_world_new(CuTest* tc) {
     printf(
-            "\nChunks are (%d x %d x %d) in size, with %d tiles per chunk, and a data size of %zu KB\n",
+            "\nChunks are (%d x %d x %d) in size, with %d tiles per chunk, and a data size of %lu KB\n",
             CHUNK_LENGTH, CHUNK_LENGTH, CHUNK_LENGTH, CHUNK_LENGTH * CHUNK_LENGTH * CHUNK_LENGTH,
-            sizeof(WorldChunk) / 1000
+            sizeof(WorldChunk) / 1000L
     );
 
     World* world = world_new(INT_MAX);
@@ -32,19 +33,6 @@ void test_world_new(CuTest* tc) {
             "Maximum world size is %llu tiles wide, containing %llu chunks per z-level, with a tree depth of %d\n",
             n_ch * CHUNK_LENGTH, n_ch * n_ch, world->depth
     );
-}
-
-#define CuAssertVec3iEquals(tc, ex, ac) CuAssertVec3iEquals_LineMsg((tc),__FILE__,__LINE__,NULL,(ex),(ac))
-
-void CuAssertVec3iEquals_LineMsg(CuTest* tc, const char* file, int line, const char* message, Vector3i expected,
-                                 Vector3i actual) {
-    char buf[STRING_MAX];
-    if (expected.x == actual.x && expected.y == actual.y && expected.z == actual.z) return;
-    sprintf(buf,
-            "expected (%d, %d, %d) but was (%d, %d, %d)",
-            expected.x, expected.y, expected.z, actual.x, actual.y, actual.z
-    );
-    CuFail_Line(tc, file, line, message, buf);
 }
 
 void test_world_tile_data(CuTest* tc) {
@@ -140,120 +128,87 @@ void test_world_iterator(CuTest* tc) {
     }
 }
 
-void test_world_directional_itr_small_pos(CuTest* tc) {
-    World* world = world_new(100);
-    WorldTile base_tile = {LIST_EMPTY, TILE_FLAG_VISIBLE};
-    BoundingBox area = (BoundingBox) {-10, -10, -10, 10, 10, 10};
-    world_initialize_area(world, area, base_tile);
+int test_direction(CuTest* tc, WorldDirectionalIterator* itr, const int x_dir, const int y_dir) {
+    const int z_dir = -1;
 
-    Vector3f two = {2, 2, 2};
-    WorldDirectionalIterator itr = world_directional_iterator(world, &VECTOR_ZERO, &two, true, true);
+    List seen;
+    list_init(&seen, sizeof(Vector3i), 5 * 5 * 5);
 
-    { // once
-        CuAssertTrue(tc, world_directional_iterator_has_next(&itr));
-        WorldTileData tile = world_directional_iterator_next(&itr);
-        CuAssertVec3iEquals(tc, ((Vector3i) {-1, -1, 0}), tile.coord);
+    while (world_directional_iterator_has_next(itr)) {
+        WorldTileData tile = world_directional_iterator_next(itr);
+        Vector3i tile_coord = tile.coord;
+
+        for (int i = 0; i < list_get_size(&seen); ++i) {
+            Vector3i* other = list_get(&seen, i);
+
+            CuAssert(tc, "Tile has been returned before", !vectori_equals(other, &tile_coord));
+
+            Vector3i delta = {tile_coord.x - other->x, tile_coord.y - other->y, tile_coord.z - other->z};
+            delta.x *= x_dir;
+            delta.y *= y_dir;
+            delta.z *= z_dir;
+            // from here, delta is in the direction
+
+            bool in_front = (delta.x == delta.y && delta.y == delta.z && delta.x < 0);
+            CuAssert(tc, "Tile is right in front of an earlier tile", !in_front);
+
+            bool overlap_yz = (delta.x - 1 == delta.y && delta.y == delta.z && delta.y < 0);
+            bool overlap_xz = (delta.x == delta.y - 1 && delta.x == delta.z && delta.x < 0);
+            bool overlap_xy = (delta.x == delta.y && delta.x == delta.z - 1 && delta.x < 0);
+            CuAssert(tc, "Tile overlaps an earlier tile", !(overlap_yz || overlap_xz || overlap_xy));
+        }
+
+        list_add(&seen, &tile_coord);
     }
-
-    for (int i = 0; i < 3; ++i) {
-        CuAssertTrue(tc, world_directional_iterator_has_next(&itr));
-        WorldTileData tile = world_directional_iterator_next(&itr);
-        // two negative, one zero (if only z was also positive)
-        CuAssertIntEquals(tc, -2, tile.coord.x + tile.coord.y + (1 - tile.coord.z));
-    }
-
-    for (int i = 0; i < 3; ++i) {
-        CuAssertTrue(tc, world_directional_iterator_has_next(&itr));
-        WorldTileData tile = world_directional_iterator_next(&itr);
-        // one negative, two zero (if only z was also positive)
-        CuAssertIntEquals(tc, -1, tile.coord.x + tile.coord.y + (1 - tile.coord.z));
-    }
-
-    { // once
-        CuAssertTrue(tc, world_directional_iterator_has_next(&itr));
-        WorldTileData tile = world_directional_iterator_next(&itr);
-        CuAssertVec3iEquals(tc, ((Vector3i) {0, 0, -1}), tile.coord);
-    }
-
-    CuAssertTrue(tc, !world_directional_iterator_has_next(&itr));
+    
+    int nr_seen = list_get_size(&seen);
+    list_free(&seen);
+    return nr_seen;
 }
 
-// basically a copy of test_world_directional_itr_small_pos
-void test_world_directional_itr_small_neg(CuTest* tc) {
+void test_world_directional_itr_small(CuTest* tc) {
     World* world = world_new(100);
     WorldTile base_tile = {LIST_EMPTY, TILE_FLAG_VISIBLE};
     BoundingBox area = (BoundingBox) {-10, -10, -10, 10, 10, 10};
     world_initialize_area(world, area, base_tile);
 
-    Vector3f two = {2, 2, 2};
-    WorldDirectionalIterator itr = world_directional_iterator(world, &VECTOR_ZERO, &two, false, false);
-
-    { // once
-        CuAssertTrue(tc, world_directional_iterator_has_next(&itr));
-        WorldTileData tile = world_directional_iterator_next(&itr);
-        CuAssertVec3iEquals(tc, ((Vector3i) {0, 0, 0}), tile.coord);
+    { // base case
+        WorldDirectionalIterator itr = world_directional_iterator(world, &VECTOR_ZERO, 2, 2, false, false, -2);
+        int i = test_direction(tc, &itr, -1, -1);
+        LOG_INFO_F("Base case 2x2x2 returned %d tiles", i);
+        CuAssert(tc, "Not enough tiles returned", i > 8);
     }
-
-    for (int i = 0; i < 3; ++i) {
-        CuAssertTrue(tc, world_directional_iterator_has_next(&itr));
-        WorldTileData tile = world_directional_iterator_next(&itr);
-        // one negative, two zero
-        CuAssertIntEquals(tc, -1, tile.coord.x + tile.coord.y + tile.coord.z);
+    { // 3x3x3 block, direction 1/4
+        WorldDirectionalIterator itr = world_directional_iterator(world, &VECTOR_ZERO, 3, 3, false, false, -3);
+        int i = test_direction(tc, &itr, -1, -1);
+        CuAssert(tc, "Not enough tiles returned", i > 27);
     }
-
-    for (int i = 0; i < 3; ++i) {
-        CuAssertTrue(tc, world_directional_iterator_has_next(&itr));
-        WorldTileData tile = world_directional_iterator_next(&itr);
-        // two negative, one zero
-        CuAssertIntEquals(tc, -2, tile.coord.x + tile.coord.y + tile.coord.z);
+    { // 3x3x3 block, direction 2/4
+        WorldDirectionalIterator itr = world_directional_iterator(world, &VECTOR_ZERO, 3, 3, true, true, -3);
+        int i = test_direction(tc, &itr, 1, 1);
+        CuAssert(tc, "Not enough tiles returned", i > 27);
     }
-
-    { // once
-        CuAssertTrue(tc, world_directional_iterator_has_next(&itr));
-        WorldTileData tile = world_directional_iterator_next(&itr);
-        CuAssertVec3iEquals(tc, ((Vector3i) {-1, -1, -1}), tile.coord);
+    { // 3x3x3 block, direction 3/4
+        WorldDirectionalIterator itr = world_directional_iterator(world, &VECTOR_ZERO, 3, 3, true, false, -3);
+        int i = test_direction(tc, &itr, 1, -1);
+        CuAssert(tc, "Not enough tiles returned", i > 27);
     }
-
-    CuAssertTrue(tc, !world_directional_iterator_has_next(&itr));
-}
-
-void test_world_directional_itr_small_cross(CuTest* tc) {
-    World* world = world_new(100);
-    WorldTile base_tile = {LIST_EMPTY, TILE_FLAG_VISIBLE};
-    BoundingBox area = (BoundingBox) {-10, -10, -10, 10, 10, 10};
-    world_initialize_area(world, area, base_tile);
-
-    Vector3f two = {2, 2, 2};
-    WorldDirectionalIterator itr1 = world_directional_iterator(world, &VECTOR_ZERO, &two, false, true);
-    { // once
-        CuAssertTrue(tc, world_directional_iterator_has_next(&itr1));
-        WorldTileData tile = world_directional_iterator_next(&itr1);
-        CuAssertVec3iEquals(tc, ((Vector3i) {0, -1, 0}), tile.coord);
+    { // 3x3x3 block, direction 4/4
+        WorldDirectionalIterator itr = world_directional_iterator(world, &VECTOR_ZERO, 3, 3, false, true, -3);
+        int i = test_direction(tc, &itr, -1, 1);
+        CuAssert(tc, "Not enough tiles returned", i > 27);
     }
-    for (int i = 0; i < 6; ++i) {
-        CuAssertTrue(tc, world_directional_iterator_has_next(&itr1));
-        world_directional_iterator_next(&itr1);
+    { // large block, non-zero focus
+        Vector3fc focus = {3, 4, 5};
+        WorldDirectionalIterator itr = world_directional_iterator(world, &focus, 10, 20, false, false, 0);
+        int i = test_direction(tc, &itr, -1, -1);
+        CuAssert(tc, "Not enough tiles returned", i > 100);
     }
-    { // once
-        CuAssertTrue(tc, world_directional_iterator_has_next(&itr1));
-        WorldTileData tile = world_directional_iterator_next(&itr1);
-        CuAssertVec3iEquals(tc, ((Vector3i) {-1, 0, -1}), tile.coord);
-    }
-
-    WorldDirectionalIterator itr2 = world_directional_iterator(world, &VECTOR_ZERO, &two, true, false);
-    { // once
-        CuAssertTrue(tc, world_directional_iterator_has_next(&itr2));
-        WorldTileData tile = world_directional_iterator_next(&itr2);
-        CuAssertVec3iEquals(tc, ((Vector3i) {-1, 0, 0}), tile.coord);
-    }
-    for (int i = 0; i < 6; ++i) {
-        CuAssertTrue(tc, world_directional_iterator_has_next(&itr2));
-        world_directional_iterator_next(&itr2);
-    }
-    { // once
-        CuAssertTrue(tc, world_directional_iterator_has_next(&itr2));
-        WorldTileData tile = world_directional_iterator_next(&itr2);
-        CuAssertVec3iEquals(tc, ((Vector3i) {0, -1, -1}), tile.coord);
+    { // large block, negative non-zero focus, mixed direction
+        Vector3fc focus = {-3, -4, -5};
+        WorldDirectionalIterator itr = world_directional_iterator(world, &focus, 10, 20, false, true, -20);
+        int i = test_direction(tc, &itr, -1, 1);
+        CuAssert(tc, "Not enough tiles returned", i > 100);
     }
 }
 
@@ -289,6 +244,7 @@ CuSuite* world_suite(void) {
     SUITE_ADD_TEST(suite, test_world_new);
     SUITE_ADD_TEST(suite, test_world_tile_data);
     SUITE_ADD_TEST(suite, test_world_iterator);
+    SUITE_ADD_TEST(suite, test_world_directional_itr_small);
     SUITE_ADD_TEST(suite, test_world_directional_itr_large);
 
     return suite;

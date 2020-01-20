@@ -1,6 +1,6 @@
 add_executable(
         unit_test EXCLUDE_FROM_ALL
-        main.c
+        test_main.c
         CuTest.c
         ../src/YADFEngine/DataStructures/StaticMonoAllocator.c
 )

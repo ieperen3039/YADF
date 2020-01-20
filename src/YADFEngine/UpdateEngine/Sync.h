@@ -21,7 +21,8 @@
 #include <windows.h>
 
 typedef CRITICAL_SECTION sync_mutex;
-typedef HANDLE sync_semaphore;
+// wrap a HANDLE in a struct to better support compiler warnings
+typedef struct {HANDLE h;} sync_semaphore;
 typedef CONDITION_VARIABLE sync_condition;
 typedef unsigned long sync_thread_id;
 
@@ -41,6 +42,11 @@ typedef pthread_t sync_thread_id;
 #endif
 
 typedef void* (*WorkerFunction)(void* data);
+typedef struct {
+    sync_semaphore arrival;
+    sync_semaphore departure;
+    const int size;
+} sync_barrier;
 
 /**
  * Create a new thread, which runs the given function with the given data as only parameter.
@@ -65,10 +71,31 @@ static inline void sync_semaphore_wait(sync_semaphore* sem);
 static inline bool sync_semaphore_trywait(sync_semaphore* sem);
 static inline void sync_semaphore_post(sync_semaphore* sem);
 
+static inline sync_barrier sync_barrier_new(int size){
+    sync_barrier b = {
+            sync_semaphore_new(size - 1, size - 1),
+            sync_semaphore_new(0, size - 1),
+            size
+    };
+    return b;
+}
+
+static inline void sync_barrier_enter(sync_barrier* barrier){
+    bool is_full = sync_semaphore_trywait(&barrier->arrival);
+
+    if (is_full){
+        for (int i = 0; i < barrier->size - 1; ++i) {
+            sync_semaphore_post(barrier->departure.h);
+        }
+    } else {
+        sync_semaphore_wait(&barrier->departure);
+    }
+}
+
 #if defined(__WINDOWS__)
 
 static inline sync_semaphore sync_semaphore_new(int initial_count, int maximum_count) {
-    return CreateSemaphore(NULL, initial_count, maximum_count, NULL);
+    return (sync_semaphore){CreateSemaphore(NULL, initial_count, maximum_count, NULL)};
 }
 
 static inline sync_mutex sync_mutex_new(){
@@ -126,17 +153,17 @@ void sync_condition_broadcast(sync_condition* condition) {
     WakeAllConditionVariable(condition);
 }
 
-void sync_semaphore_wait(sync_semaphore* s) {
-    WaitForSingleObject(*s, INFINITE);
+void sync_semaphore_wait(sync_semaphore* sem) {
+    WaitForSingleObject(sem->h, INFINITE);
 }
 
-bool sync_semaphore_trywait(HANDLE* sem) {
-    DWORD result = WaitForSingleObject(*sem, 0);
+bool sync_semaphore_trywait(sync_semaphore* sem) {
+    DWORD result = WaitForSingleObject(sem->h, 0);
     return result == WAIT_TIMEOUT ? false : true;
 }
 
-static inline void sync_semaphore_post(sync_semaphore* s) {
-    ReleaseSemaphore(*s, 1, NULL);
+static inline void sync_semaphore_post(sync_semaphore* sem) {
+    ReleaseSemaphore(sem->h, 1, NULL);
 }
 
 #endif

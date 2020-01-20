@@ -26,14 +26,14 @@ struct _World {
     List entities_to_update;
 };
 
+#define index(x, y, z) ((x) + (y) * CHUNK_LENGTH + (z) * CHUNK_LENGTH * CHUNK_LENGTH)
+
 struct _WorldChunk {
-    union {
-        WorldTile tiles[CHUNK_LENGTH * CHUNK_LENGTH * CHUNK_LENGTH];
-        WorldTile grid[CHUNK_LENGTH][CHUNK_LENGTH][CHUNK_LENGTH];
-    };
+    // (x, y, z) is at tiles[x + y * CHUNK_LENGTH + z * CHUNK_LENGTH * CHUNK_LENGTH], == tiles[index(x, y, z)];
+    WorldTile tiles[CHUNK_LENGTH * CHUNK_LENGTH * CHUNK_LENGTH];
     // parent quadrant of this chunk
     WorldQuadrant* parent;
-    // position of grid[0][0][0]
+    // position of tiles[0]
     Vector3i zero_pos;
 };
 
@@ -94,14 +94,15 @@ PURE static inline bool quad_contains(WorldQuadrant* quadrant, Vector3i pos) {
     int half_quad_reach = (CHUNK_LENGTH << quadrant->height);
     Vector3i mid = quadrant->middle_pos;
     return
-            pos.x < mid.x + half_quad_reach && pos.x > mid.x - half_quad_reach &&
-            pos.y < mid.y + half_quad_reach && pos.y > mid.y - half_quad_reach &&
-            pos.z < mid.z + half_quad_reach && pos.z > mid.z - half_quad_reach;
+            pos.x < mid.x + half_quad_reach && pos.x >= mid.x - half_quad_reach &&
+            pos.y < mid.y + half_quad_reach && pos.y >= mid.y - half_quad_reach &&
+            pos.z < mid.z + half_quad_reach && pos.z >= mid.z - half_quad_reach;
 }
 
 /// index of a quadrant or chunk in the child list of a quadrant
 PURE static inline int get_quad_index(WorldQuadrant* parent, Vector3ic* coord) {
     assert(parent != NULL);
+    assert(quad_contains(parent, *coord));
     Vector3i o = parent->middle_pos;
     int index = 0;
     if (coord->x >= o.x) index |= 1;
@@ -127,6 +128,8 @@ WorldQuadrant* get_quad_under_quad(WorldQuadrant* quadrant, Vector3ic* tgtCoord,
         }
     }
 
+    assert(quad_contains(quadrant, *tgtCoord));
+
     return quadrant;
 }
 
@@ -150,7 +153,7 @@ WorldTile* get_tile_under_quad(WorldQuadrant* quadrant, Vector3ic* coord) {
     if (yRem < 0) yRem += CHUNK_LENGTH;
     if (zRem < 0) zRem += CHUNK_LENGTH;
 
-    return &(chunk->grid[xRem][yRem][zRem]);
+    return &(chunk->tiles[xRem + yRem * CHUNK_LENGTH + zRem * CHUNK_LENGTH * CHUNK_LENGTH]);
 }
 
 /**
@@ -246,7 +249,7 @@ WorldTileData chunk_tile_iterator_next(WorldTileIterator* itr) {
     }
 
     Vector3i chunkPos = itr->chunk_pos;
-    WorldTile* tile = &(itr->chunk->grid[pos.x][pos.y][pos.z]);
+    WorldTile* tile = &(itr->chunk->tiles[index(pos.x, pos.y, pos.z)]);
     WorldTileData data = {tile, {pos.x + chunkPos.x, pos.y + chunkPos.y, pos.z + chunkPos.z}};
 
     return data;
@@ -274,9 +277,10 @@ PURE WorldTile* world_get_tile_from_chunk(WorldChunk* chunk, Vector3ic* coord) {
     if (!contains_pos) {
         chunk = get_chunk_from_quad(chunk->parent, coord, NULL);
         if (chunk == NULL) return NULL;
+        c_zero = chunk->zero_pos;
     }
 
-    return &(chunk->grid[coord->x % CHUNK_LENGTH][coord->y % CHUNK_LENGTH][coord->z % CHUNK_LENGTH]);
+    return &(chunk->tiles[index(coord->x - c_zero.x, coord->y - c_zero.y, coord->z - c_zero.z)]);
 }
 
 int world_initialize_area(World* world, const BoundingBox area, const WorldTile initial_tile) {
@@ -371,52 +375,61 @@ Vector3ic* chunk_get_position(WorldChunk* chunk) {
     return &chunk->zero_pos;
 }
 
-PURE Vector3i to_int_inflate(const Vector3f* target) {
-    char xInc = target->x < 0 ? -1 : 1;
-    char yInc = target->y < 0 ? -1 : 1;
-    char zInc = target->z < 0 ? -1 : 1;
-
-    return (Vector3i) {
-            target->x + xInc,
-            target->y + yInc,
-            target->z + zInc
-    };
+PURE int to_int_inflate(float x) {
+    const int tx = (int) x;
+    return (x == tx) ? tx : (x < 0 ? tx - 1 : tx + 1);
 }
 
 WorldDirectionalIterator world_directional_iterator(
-        const World* world, Vector3fc* focus, Vector3fc* size, bool x_pos, bool y_pos
+        const World* world, Vector3fc* focus, float width, float height, bool x_pos, bool y_pos, int z_min
 ) {
-    Vector3i origin = to_int_inflate(focus);
-    Vector3i size_i = to_int_inflate(size);
-    origin.x -= size_i.x;
-    origin.y -= size_i.y;
-    origin.z -= size_i.z;
+    Vector3ic focus_i = (Vector3i) {
+            to_int_inflate(focus->x),
+            to_int_inflate(focus->y),
+            to_int_inflate(focus->z)
+    };
+
+    // half width and height
+    const int width_h_i = to_int_inflate(width / 2);
+    const int height_h_i = to_int_inflate(height / 2);
+    assert(width_h_i > 0);
+    assert(height_h_i > 0);
+
+    const bool equi_directional = (x_pos == y_pos);
+    // half-size parallel to x=y
+    const int equ_h_size = equi_directional ? width_h_i : height_h_i;
+    // half-size orthogonal to x=y (parallel to x=-y)
+    const int diff_h_size = equi_directional ? height_h_i : width_h_i;
+
+    const int x_add_y_min = focus_i.x + focus_i.y - 2 * equ_h_size;
+    const int x_add_y_max = focus_i.x + focus_i.y + 2 * equ_h_size;
+    const int x_sub_y_min = focus_i.x - focus_i.y - 2 * diff_h_size;
+    const int x_sub_y_max = focus_i.x - focus_i.y + 2 * diff_h_size;
+
+    const int x_add_y_begin = y_pos ? x_add_y_min : x_add_y_max; // a
+    const int x_sub_y_begin = !y_pos ? x_sub_y_min : x_sub_y_max; // b
+
+    // x + y = a & x - y = b ; x = b + y ; b + y + y = a ; 2y = a - b
+    const int y = (x_add_y_begin - x_sub_y_begin) / 2;
+    Vector3ic current = {x_sub_y_begin + y, y, focus_i.z};
+
+    WorldQuadrant* quadrant = get_quad_under_quad(world->chunks, &focus_i, NULL);
 
     return (WorldDirectionalIterator) {
-            world, get_quad_under_quad(world->chunks, &origin, NULL),
-            origin, size_i, 0, 0, 0, x_pos, y_pos, false
+            world,
+            quadrant,
+            current,
+            x_sub_y_min,
+            x_sub_y_max,
+            x_add_y_min,
+            x_add_y_max,
+            z_min,
+            x_pos, y_pos
     };
 }
 
 WorldTileData world_directional_iterator_next(WorldDirectionalIterator* itr) {
-    const char xInc = itr->xp ? 1 : -1;
-    const char yInc = itr->yp ? 1 : -1;
-    const char zInc = -1;
-    const int xOff = itr->xSteps * xInc;
-    const int yOff = itr->ySteps * yInc;
-    const int zOff = itr->zSteps * zInc;
-
-    // 4 skews:
-    // add  y to x
-    // add -x to y
-    // add -y to z
-    // add y to x and y
-    Vector3i position = itr->origin;
-    position.x += xOff + yOff + yOff;
-    position.y += yOff - xOff + yOff;
-    position.z += zOff - yOff;
-    // these skews creates one hole behind each vertex
-    if (itr->isSecondary) position.x += xInc;
+    Vector3i position = itr->current;
 
     WorldTile* tile = NULL;
     if (!quad_contains(itr->quad, position)) {
@@ -432,33 +445,56 @@ WorldTileData world_directional_iterator_next(WorldDirectionalIterator* itr) {
 
     WorldTileData tile_data = {tile, position};
 
-    itr->xSteps++;
-    if (itr->xSteps > itr->size.x) {
-        itr->xSteps = 0;
+    // update x
+    const int xDir = itr->xp ? 1 : -1; // -watch_dir
+    itr->current.x += xDir;
 
-        itr->ySteps++;
-        if (itr->ySteps > itr->size.y) {
-            itr->ySteps = itr->zSteps; // results in a maximum z-level
+    // check bounds.
+    int x_sub_y = itr->current.x - itr->current.y;
+    int x_add_y = itr->current.x + itr->current.y;
+    // Only two bounds will ever be met, but figuring out which two is more expensive than just testing all
+    if (x_sub_y > itr->x_sub_y_max || x_sub_y < itr->x_sub_y_min || x_add_y > itr->x_add_y_max || x_add_y < itr->x_add_y_min) {
+        // update y
+        const int yDir = itr->yp ? 1 : -1;
+        itr->current.y += yDir;
 
-            if (itr->isSecondary) {
-                itr->zSteps++;
-                itr->isSecondary = false;
+        // re-calculate the two limits of the x starting value
+        const int x_add_y_begin = itr->yp ? itr->x_add_y_min : itr->x_add_y_max; // a
+        const int x_sub_y_begin = !itr->yp ? itr->x_sub_y_min : itr->x_sub_y_max; // b
+        const int add_lim = x_sub_y_begin + itr->current.y;
+        const int sub_lim = x_add_y_begin - itr->current.y;
+        // One of these limit x. Instead of calculating which one, we take the logic value regarding iteration direction
+        itr->current.x = ((sub_lim < add_lim) == itr->xp) ? sub_lim : add_lim;
 
-            } else {
-                itr->isSecondary = true;
-            }
+        // check whether the new start of (x, y) is out-of-bounds as well
+        x_sub_y = itr->current.x - itr->current.y;
+        x_add_y = itr->current.x + itr->current.y;
+        if (x_sub_y > itr->x_sub_y_max || x_sub_y < itr->x_sub_y_min || x_add_y > itr->x_add_y_max || x_add_y < itr->x_add_y_min) {
+            // then we need to go to the next z-level
+            itr->current.z--; // z is always down
+
+            itr->x_sub_y_min += xDir - yDir;
+            itr->x_sub_y_max += xDir - yDir;
+            itr->x_add_y_min += xDir + yDir;
+            itr->x_add_y_max += xDir + yDir;
+
+            // copied from iterator initializer
+            itr->current.y = (x_add_y_begin - x_sub_y_begin) / 2;
+            itr->current.x = x_sub_y_begin + itr->current.y;
         }
+
+        // if the new (x, y) is still out of bounds, it would mean that width or height is 0 (which shouldn't happen)
     }
 
     return tile_data;
 }
 
-WorldTile* world_get_tile(World* world, Vector3i* coord) {
-    return get_tile_under_quad(world->chunks, coord);
+bool world_directional_iterator_has_next(WorldDirectionalIterator* itr) {
+    return itr->current.z >= itr->z_min;
 }
 
-bool world_directional_iterator_has_next(WorldDirectionalIterator* itr) {
-    return itr->zSteps > itr->size.z;
+WorldTile* world_get_tile(World* world, Vector3i* coord) {
+    return get_tile_under_quad(world->chunks, coord);
 }
 
 void world_tile_init(WorldTile* base_tile, char flags) {

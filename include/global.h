@@ -49,11 +49,16 @@ static const char* error_get_name(ErrorCode ec) {
 #define LOG_ERROR_F(fmt, msg...) lprintf(stderr, __FILE__, __LINE__, "", false); fprintf(stderr, fmt, msg); fprintf(stderr, "\n")
 
 static void lprintf(FILE* out, const char* file_name, int line, const char* msg, bool newline) {
-    char prefix[50];
+    char prefix[60];
     char* project_local = strstr(file_name, "YADF");
-    snprintf(prefix, 50, "%s:%d: ", project_local, line);
-    fprintf(out, "%-50s : %s", prefix, msg);
-    if (newline) fprintf(out, "\n");
+    snprintf(prefix, 60, "%s:%d: ", project_local, line);
+
+    // respecting multi-threading
+    if (newline) {
+        fprintf(out, "%-59s : %s\n", prefix, msg);
+    } else {
+        fprintf(out, "%-59s : %s", prefix, msg);
+    }
 }
 
 #ifdef __GNUC__

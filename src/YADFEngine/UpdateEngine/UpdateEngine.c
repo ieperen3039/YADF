@@ -14,13 +14,14 @@
 #define NR_OF_UPDATE_LISTS (WORKER_COUNT * 2)
 
 struct _UpdateWorkerPool {
-    sync_semaphore loop_limiter;
+    sync_semaphore dispose_lock;
     World* world;
 
     sync_mutex lock_buffer;
     sync_condition cond_has_space;
     sync_condition cond_has_elements;
     sync_condition cond_idle_workers;
+    sync_semaphore update_trigger;
 
     volatile enum State state;
     volatile int idle_workers; // waiting or stopped
@@ -36,6 +37,9 @@ struct _UpdateWorkerPool {
 
 void* worker_function(void* worker_pool_ptr) {
     UpdateWorkerPool* pool = worker_pool_ptr;
+    // prevent disposal of pool for as long as this thread is running
+    sync_semaphore_wait(&pool->dispose_lock);
+
     ListIterator task_data;
     UpdateCycle game_time;
 
@@ -49,8 +53,8 @@ void* worker_function(void* worker_pool_ptr) {
             sync_condition_wait(&pool->cond_has_elements, &pool->lock_buffer);
 
             if (pool->state == STATE_STOPPING) {
-                // thread stops as idle, and should return all locks
                 sync_unlock(&pool->lock_buffer);
+                sync_semaphore_post(&pool->dispose_lock);
                 return NULL;
             }
 
@@ -73,6 +77,7 @@ void* worker_function(void* worker_pool_ptr) {
     pool->idle_workers++;
     sync_condition_signal(&pool->cond_idle_workers);
 
+    sync_semaphore_post(&pool->dispose_lock);
     return NULL;
 }
 
@@ -113,9 +118,12 @@ void dispatch_task(UpdateWorkerPool* pool, ListIterator task) {
 
 void* update_dispatch(void* data) {
     UpdateWorkerPool* pool = data;
+    // prevent disposal of pool for as long as this thread is running
+    sync_semaphore_wait(&pool->dispose_lock);
+
     List entities;
 
-    sync_semaphore_wait(&pool->loop_limiter);
+    sync_semaphore_wait(&pool->update_trigger);
 
     while (pool->state != STATE_STOPPING) {
         pool->game_time++;
@@ -164,13 +172,10 @@ void* update_dispatch(void* data) {
 
         // TODO Unlock frame rendering
 
-        sync_semaphore_wait(&pool->loop_limiter);
+        sync_semaphore_wait(&pool->update_trigger);
     }
 
-    // this ensures that iff (idle_workers > WORKER_COUNT) then all threads are stopped
-    pool->idle_workers++;
-    sync_condition_signal(&pool->cond_idle_workers);
-
+    sync_semaphore_post(&pool->dispose_lock);
     return NULL;
 }
 
@@ -181,7 +186,8 @@ UpdateWorkerPool* update_workers_new() {
     pool->buffer_tail = 0;
     pool->idle_workers = 0;
 
-    pool->loop_limiter = sync_semaphore_new(0, 1);
+    pool->dispose_lock = sync_semaphore_new(WORKER_COUNT + 1, WORKER_COUNT + 1);
+    pool->update_trigger = sync_semaphore_new(0, 1);
     pool->lock_buffer = sync_mutex_new();
     pool->cond_has_space = sync_condition_new();
     pool->cond_has_elements = sync_condition_new();
@@ -209,14 +215,12 @@ void update_workers_free(UpdateWorkerPool* pool) {
 
     // wake all threads waiting for tasks
     sync_condition_broadcast(&pool->cond_has_elements);
+    sync_semaphore_post(&pool->update_trigger);
 
     // wait until all threads are stopped
-    // iff (idle_workers > WORKER_COUNT) then all threads are stopped
-    sync_lock(&pool->lock_buffer);
-    while (pool->idle_workers <= WORKER_COUNT) {
-        sync_condition_wait(&pool->cond_idle_workers, &pool->lock_buffer);
+    for (int i = 0; i < WORKER_COUNT + 1; ++i) {
+        sync_semaphore_wait(&pool->dispose_lock);
     }
-    sync_unlock(&pool->lock_buffer);
 
     free(pool);
 }
@@ -224,6 +228,6 @@ void update_workers_free(UpdateWorkerPool* pool) {
 void update_start_tick(UpdateWorkerPool* pool, World* world) {
     pool->world = world;
 
-    sync_semaphore_trywait(&pool->loop_limiter);
-    sync_semaphore_post(&pool->loop_limiter);
+    sync_semaphore_trywait(&pool->update_trigger);
+    sync_semaphore_post(&pool->update_trigger);
 }
