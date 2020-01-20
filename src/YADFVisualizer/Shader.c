@@ -9,6 +9,7 @@
 #include <malloc.h>
 
 #define SHADER_MAX_NUM_MATERIALS 8 // materials per entity
+#define AZIMUTH_RATIO 0.3 // the fraction that a tile shifts up on the screen when moving 1 back in x or y direction
 
 struct _Shader {
     GLuint ID;
@@ -72,7 +73,7 @@ void shader_set_color(Shader* shader, int index, Color4f color) {
 
 void shader_set_tile_position(Shader* shader, Vector3i coordinate) {
     double x = 0.5 * (coordinate.x - coordinate.y);
-    double y = 0.5 * (coordinate.z - 0.5 * (coordinate.x + coordinate.y));
+    double y = (1 - AZIMUTH_RATIO) * (coordinate.z - AZIMUTH_RATIO * (coordinate.x + coordinate.y));
 
     glUniform2f(shader->texture_position, x - 0.5, y + 0.5);
 }
