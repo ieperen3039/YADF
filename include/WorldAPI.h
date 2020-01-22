@@ -10,15 +10,19 @@
 #include "../src/YADFEngine/DataStructures/List.h"
 #include "../src/YADFEngine/DataStructures/BoundingBox.h"
 
-#define TILE_FLAG_OPAQUE (1 << 0)
+#define TILE_FLAG_BLOCKING (1 << 0)
 #define TILE_FLAG_ABOVE_GAP (1 << 1)
 #define TILE_FLAG_VISIBLE (1 << 2)
 #define TILE_FLAG_DISCOVERED (1 << 3)
 //#define TILE_FLAG_ (1 << 0)
 
+typedef struct _FluidFlow FluidFlow;
+
 typedef struct {
     // items on this tile
     List entity_ptrs; // type = Entity*
+    // fluids on this tile
+    FluidFlow* fluids; // pointer to save space, store in chunk
     // various TILE_FLAGs
     char flags;
 } WorldTile;
@@ -105,8 +109,9 @@ typedef struct {
  * @param cutoff_z z-values above this level are not returned
  * @return
  */
-YADF_API WorldDirectionalIterator
-world_directional_iterator(const World* world, Vector3fc* focus, Vector3fc* size, bool x_pos, bool y_pos);
+YADF_API WorldDirectionalIterator world_directional_iterator(
+        const World* world, Vector3fc* focus, Vector3fc* size, bool x_pos, bool y_pos
+);
 
 YADF_API WorldTileData world_directional_iterator_next(WorldDirectionalIterator* itr);
 
@@ -114,5 +119,8 @@ YADF_API bool world_directional_iterator_has_next(WorldDirectionalIterator* itr)
 
 YADF_API Vector3ic* chunk_get_position(WorldChunk* chunk);
 
+YADF_API FluidFlow* world_get_fluid(Vector3ic* coord, WorldChunk* chunk);
+
+YADF_API FluidFlow* world_tile_get_fluid(WorldTile* tile, WorldChunk* chunk);
 
 #endif //YADF_WORLDAPI_H
