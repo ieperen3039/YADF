@@ -44,16 +44,16 @@ void test_world_tile_data(CuTest* tc) {
     Vector3i zero = (Vector3i) {0, 0, 0};
     WorldTile* tile1 = world_get_tile(world, &zero);
     CuAssertTrue(tc, tile1->flags & TILE_FLAG_VISIBLE);
-    tile1->flags |= TILE_FLAG_OPAQUE;
+    tile1->flags |= TILE_FLAG_BLOCKING;
 
     Vector3i pos2 = (Vector3i) {AREA_MIN_2, -AREA_MIN_2, -AREA_MIN_2};
     WorldTile* tile2 = world_get_tile(world, &zero);
     CuAssertTrue(tc, tile2->flags & TILE_FLAG_VISIBLE);
-    tile2->flags |= TILE_FLAG_OPAQUE;
+    tile2->flags |= TILE_FLAG_BLOCKING;
 
     WorldTile* tile3 = world_get_tile(world, &zero);
     CuAssertPtrEquals(tc, tile3, tile1); // must point to the exact same tile
-    CuAssertTrue(tc, tile2->flags & TILE_FLAG_OPAQUE);
+    CuAssertTrue(tc, tile2->flags & TILE_FLAG_BLOCKING);
 }
 
 void test_world_iterator(CuTest* tc) {
@@ -78,7 +78,7 @@ void test_world_iterator(CuTest* tc) {
     size_t num_positions = sizeof(positions) / sizeof(Vector3i);
     for (int i = 0; i < num_positions; i++) {
         WorldTile* tile = world_get_tile(world, &positions[i]);
-        tile->flags |= TILE_FLAG_OPAQUE;
+        tile->flags |= TILE_FLAG_BLOCKING;
     }
 
     WorldChunkIterator itr = world_get_chunk_iterator(world, area);
@@ -102,7 +102,7 @@ void test_world_iterator(CuTest* tc) {
                         positions[i].y == tile.coord.y &&
                         positions[i].z == tile.coord.z
                         ) {
-                    CuAssertIntEquals(tc, TILE_FLAG_VISIBLE | TILE_FLAG_OPAQUE, elt->flags);
+                    CuAssertIntEquals(tc, TILE_FLAG_VISIBLE | TILE_FLAG_BLOCKING, elt->flags);
                     has_found = true;
                 }
             }
@@ -234,7 +234,7 @@ void test_world_directional_itr_large(CuTest* tc) {
     size_t num_positions = sizeof(positions) / sizeof(Vector3i);
     for (int i = 0; i < num_positions; i++) {
         WorldTile* tile = world_get_tile(world, &positions[i]);
-        tile->flags |= TILE_FLAG_OPAQUE;
+        tile->flags |= TILE_FLAG_BLOCKING;
     }
 }
 
