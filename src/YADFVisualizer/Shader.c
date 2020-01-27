@@ -9,14 +9,17 @@
 #include <malloc.h>
 
 #define SHADER_MAX_NUM_MATERIALS 8 // materials per entity
-#define AZIMUTH_RATIO 0.3 // the fraction that a tile shifts up on the screen when moving 1 back in x or y direction
+#define SPRITE_SPINE_PIXELS 24.0
+#define SPRITE_BOWEL_PIXELS 19.0
 
 struct _Shader {
     GLuint ID;
     GLuint texture_position;
     GLuint camera_position;
     GLuint scaling;
+    GLuint brightness;
     GLuint sprite;
+    Vector3f camera_vector3f;
     GLuint colors[SHADER_MAX_NUM_MATERIALS];
 };
 
@@ -37,6 +40,7 @@ Shader* shader_new() {
     p->texture_position = glGetUniformLocation(shader, "sprite_origin");
     p->camera_position = glGetUniformLocation(shader, "camera_position");
     p->scaling = glGetUniformLocation(shader, "scaling");
+    p->brightness = glGetUniformLocation(shader, "brightness");
 
     for (int i = 0; i < SHADER_MAX_NUM_MATERIALS; ++i) {
         char uniform_name[15];
@@ -53,13 +57,21 @@ Shader* shader_new() {
 }
 
 void shader_bind(Shader* shader, Vector3fc* eye, int window_width, int window_height) {
+    shader->camera_vector3f = *eye;
     glUseProgram(shader->ID);
+
+    const double zoom_scaling = 1;
+    double x_scale = zoom_scaling * SPRITE_WIDTH_PIXELS / window_width;
+    double y_scale = zoom_scaling * SPRITE_HEIGHT_PIXELS / window_height;
+    glUniform2f(shader->scaling, -x_scale, -y_scale);
     glUniform1i(shader->sprite, 0); // set texture manually
-    double zoom_factor = 100.0;
-    glUniform2f(shader->scaling, -zoom_factor / window_width, -zoom_factor / window_height);
+
+    const double Z_MUL = SPRITE_SPINE_PIXELS / SPRITE_HEIGHT_PIXELS;
+    const double XY_MUL = SPRITE_BOWEL_PIXELS / SPRITE_HEIGHT_PIXELS;
 
     double x = 0.5 * (eye->x - eye->y);
-    double y = eye->z - 0.5 * (eye->x + eye->y);
+    double y = -Z_MUL * eye->z - XY_MUL * (eye->x + eye->y);
+
     glUniform2f(shader->camera_position, x, y);
 }
 
@@ -72,10 +84,18 @@ void shader_set_color(Shader* shader, int index, Color4f color) {
 }
 
 void shader_set_tile_position(Shader* shader, Vector3i coordinate) {
-    double x = 0.5 * (coordinate.x - coordinate.y);
-    double y = (1 - AZIMUTH_RATIO) * (coordinate.z - AZIMUTH_RATIO * (coordinate.x + coordinate.y));
+    const double Z_MUL = SPRITE_SPINE_PIXELS / SPRITE_HEIGHT_PIXELS;
+    const double XY_MUL = SPRITE_BOWEL_PIXELS / SPRITE_HEIGHT_PIXELS;
 
-    glUniform2f(shader->texture_position, x - 0.5, y + 0.5);
+    double x = 0.5 * (coordinate.x - coordinate.y);
+    double y = -Z_MUL * coordinate.z - XY_MUL * (coordinate.x + coordinate.y);
+
+    glUniform2f(shader->texture_position, x - 0.5, y - 0.5);
+
+    int camera_z = (int) shader->camera_vector3f.z; // forgive me
+    double fraction = max_i(0, min_i(10, camera_z - coordinate.z)) / 10.0;
+//    LOG_INFO_F("eye: %d, tile: %d, fraction: %6.03f", camera_z, coordinate.z, fraction);
+    glUniform1f(shader->brightness, 1 - fraction);
 }
 
 void shader_free(Shader* shader) {

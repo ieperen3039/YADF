@@ -18,7 +18,7 @@ PURE int fluid_at_tile(WorldTile* tile) {
 /**
  * @return flow of a to b, 0 if b has more fluid than a
  */
-PURE inline FluidAmount fluid_flow(WorldTile* a, WorldTile* b) {
+PURE static inline FluidAmount fluid_flow(WorldTile* a, WorldTile* b) {
   if (b->flags & TILE_FLAG_BLOCKING) return 0;
   int flow = fluid_at_tile(a) - fluid_at_tile(b);
   return (FluidAmount) min_i(AMOUNT_MAX, max_i(0, flow));

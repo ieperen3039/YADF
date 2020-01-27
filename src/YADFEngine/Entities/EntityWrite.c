@@ -29,3 +29,7 @@ Entity* entity_new(enum EntityClass type, const void* initial_data) {
 
     return new_entity;
 }
+
+void entity_free(Entity* ety) {
+    free(ety);
+}

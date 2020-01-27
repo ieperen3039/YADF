@@ -131,7 +131,7 @@ void* update_dispatch(void* data) {
 
         // we assume to be already synced with workers
         assert(pool->idle_workers == WORKER_COUNT);
-        const int nr_of_entities = list_get_size(&entities);
+        const int nr_of_entities = list_size(&entities);
         const int elements_per_worker = max_i(nr_of_entities / WORKER_COUNT + 1, 16);
 
         // TODO Lock callbacks

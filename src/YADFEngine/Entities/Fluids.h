@@ -35,8 +35,8 @@ static const struct FluidProperties {
 };
 
 typedef struct _FluidFlow {
-  FluidAmount amount[FluidTypeSize];
-  FluidAmount amount_prev[FluidTypeSize];
+  FluidAmount amount[ENUM_SIZE(FluidType)];
+  FluidAmount amount_prev[ENUM_SIZE(FluidType)];
   FluidAmount amount_total;
   FluidAmount amount_total_prev;
   FluidAmount flow_out_total;

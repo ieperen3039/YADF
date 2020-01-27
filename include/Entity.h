@@ -21,11 +21,11 @@ ENUM( EntityClass,
 
 enum DescriptionLength {
     // "You punch the <NAME>" / "The <NAME> punches back!"
-    NAME,
+    DESC_NAME,
     // "This is <SHORT>" / "You found a <SHORT>!" (excludes a/an/the)
-    SHORT,
+    DESC_SHORT,
     // "This <NAME> is <LONG>"
-    LONG
+    DESC_LONG
 };
 
 typedef void (* UpdateFunction)(Entity* this, UpdateCycle game_time);

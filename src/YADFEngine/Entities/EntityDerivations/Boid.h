@@ -11,9 +11,9 @@
 int entity_impl_boid_description(char* str, int max_chars, Entity* ety, enum DescriptionLength length) {
     struct EntityImplBoid* data = ety->entity_data;
     switch (length) {
-        case NAME:
-        case SHORT:
-        case LONG:
+        case DESC_NAME:
+        case DESC_SHORT:
+        case DESC_LONG:
             return snprintf(str, max_chars, "boid %d", data->id);
         default:
             assert(false);

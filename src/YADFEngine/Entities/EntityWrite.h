@@ -24,4 +24,6 @@
  */
 Entity* entity_new(enum EntityClass type, const void* initial_data);
 
+void entity_free(Entity* ety);
+
 #endif //YADF_ENTITYWRITE_H

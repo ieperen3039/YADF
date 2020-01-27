@@ -32,6 +32,14 @@ typedef struct _WorldChunk WorldChunk;
 typedef struct _WorldQuadrant WorldQuadrant;
 
 /**
+ * returns the tile on the given coordinate
+ * @param world a generated world
+ * @param coord the coordinate to fetch
+ * @return the tile on the given coordinate, or NULL if the coordinate is in an unloaded chunk
+ */
+YADF_API WorldTile* world_get_tile(World* world, Vector3ic* coord);
+
+/**
  * given a nearby chunk, returns the tile on the given position.
  * This is likely to be faster than world_get_tile if pos is indeed close to the given chunk
  * @param chunk a chunk, possibly containing the given pos, otherwise close to the given chunk

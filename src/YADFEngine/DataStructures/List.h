@@ -217,7 +217,7 @@ static inline void list_pack(List* list) {
 }
 
 /// current number of elements in the list
-PURE static inline int list_get_size(const List* list) {
+PURE static inline int list_size(const List* list) {
     return (int) list->_size;
 }
 

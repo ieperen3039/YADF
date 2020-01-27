@@ -3,6 +3,7 @@
 //
 
 #include "RenderFrame.h"
+#include "../YADFEngine/Entities/EntityWrite.h"
 
 #include <EntityImpl.h>
 
@@ -19,7 +20,8 @@ static inline void draw_entity(
             break;
         }
         case VEGETATION_PATCH:
-        case CREATURE:break;
+        case BOID:
+            break;
     }
 
     sprite_draw(entity_sprites[entity->class->type], shader);
@@ -30,11 +32,12 @@ void render_frame(
         const Sprite** entity_sprites, int window_width, int window_height
 ) {
     shader_bind(shader, eye, window_width, window_height);
-    float width = 20;
 
-    // TODO voxel culling
+    float tiles_in_height = (float) window_height / (float) SPRITE_HEIGHT_PIXELS;
+    float tiles_in_width = (float) window_width / (float) SPRITE_WIDTH_PIXELS;
+
     WorldDirectionalIterator itr = world_directional_iterator(
-            world, eye, width, (width * window_height) / window_width, true, true, (int) (eye->z - VIEW_DEPTH)
+            world, eye, tiles_in_width, tiles_in_height, true, true, (int) (eye->z - VIEW_DEPTH)
     );
     while (world_directional_iterator_has_next(&itr)) {
         WorldTileData tile = world_directional_iterator_next(&itr);

@@ -8,6 +8,7 @@
 #include <WorldAPI.h>
 #include <Entity.h>
 #include "../Entities/Fluids.h"
+#include "../DataStructures/Map.h"
 
 struct _WorldQuadrant {
     Vector3i middle_pos; // coordinate of center, as the negative corner of tile (0, 0, 0))
@@ -77,12 +78,11 @@ void init_quadrant_leaf(WorldQuadrant* quadrant, const WorldTile initial_tile) {
         if ((i & 2) == 0) pos.y -= CHUNK_LENGTH;
         if ((i & 4) == 0) pos.z -= CHUNK_LENGTH;
         chunk_section->zero_pos = pos;
-        list_init(&chunk_section->fluid_flows, sizeof(enum FluidType), 0);
 
         for (int j = 0; j < (CHUNK_LENGTH * CHUNK_LENGTH * CHUNK_LENGTH); ++j) {
             chunk_section->tiles[j] = initial_tile;
             // we are not going to copy the entities, so clear the list to be sure
-            if (list_get_size(&initial_tile.entity_ptrs) > 0) {
+            if (list_size(&initial_tile.entity_ptrs) > 0) {
                 list_clear(&chunk_section->tiles[j].entity_ptrs);
             }
         }
@@ -495,7 +495,7 @@ bool world_directional_iterator_has_next(WorldDirectionalIterator* itr) {
     return itr->current.z >= itr->z_min;
 }
 
-WorldTile* world_get_tile(World* world, Vector3i* coord) {
+WorldTile* world_get_tile(World* world, Vector3ic* coord) {
     return get_tile_under_quad(world->chunks, coord);
 }
 
@@ -512,8 +512,6 @@ void world_tile_add_entity(WorldTileData tile, Entity* entity, WorldChunk* chunk
 
 FluidFlow* world_tile_get_fluid(WorldTile* tile, WorldChunk* chunk) {
   if (tile->fluids == NULL){
-    FluidFlow ff = {};
-    tile->fluids = list_add(&chunk->fluid_flows, &ff); // we don't care about the actual index
   }
   return tile->fluids;
 }

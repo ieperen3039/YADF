@@ -39,7 +39,7 @@ Type* allocator_sm_alloc(AllocatorSM* alloc) {
 
 void allocator_sm_free(AllocatorSM* alloc) {
     List* data_blocks = &alloc->all_blocks;
-    for (int i = 0; i < list_get_size(data_blocks); ++i) {
+    for (int i = 0; i < list_size(data_blocks); ++i) {
         Type* data_block = *((Type**) list_get(data_blocks, i));
         free(data_block);
     }

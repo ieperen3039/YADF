@@ -8,6 +8,9 @@
 #include "Structs.h"
 #include "Materials.h"
 
+#define SPRITE_HEIGHT_PIXELS 64.0
+#define SPRITE_WIDTH_PIXELS 50.0
+
 typedef struct _Shader Shader;
 
 Shader* shader_new();

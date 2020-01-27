@@ -12,9 +12,9 @@
 int entity_impl_template_description(char* str, int max_chars, Entity* ety, enum DescriptionLength length) {
     struct EntityImpl* data = ety->entity_data;
     switch (length) {
-        case NAME:
-        case SHORT:
-        case LONG:
+        case DESC_NAME:
+        case DESC_SHORT:
+        case DESC_LONG:
             return snprintf(str, max_chars, "<template>");
         default:
             assert(false);

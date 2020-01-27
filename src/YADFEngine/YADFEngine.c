@@ -23,7 +23,7 @@ YADF_API YADFEngine* yadf_init() {
     if (!world) return NULL;
 
     // initialize starting area
-    generator_generate_default(world, (BoundingBox) {-20, -20, -10, 20, 20, 10});
+    generator_generate_default(world, (BoundingBox) {-50, -50, -20, 50, 50, 10});
     engine->world = world;
 
     LOG_INFO("Booting worker threads...");
