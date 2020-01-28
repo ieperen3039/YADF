@@ -6,6 +6,8 @@
 #ifndef YADF_ENTITY_H
 #define YADF_ENTITY_H
 
+#define ENTITY_FLAG_BLOCKING (1 << 0)
+
 #include "global.h"
 #include "Structs.h"
 #include "WorldAPI.h"
@@ -34,7 +36,6 @@ typedef void (* ApplicationFunction)(Entity* this, Vector3ic* coordinate, WorldT
 // appends the description of the entity to the given string.
 typedef int (* DescriptionAppendFunction)(char* str, int max_chars, Entity* ety, enum DescriptionLength length);
 
-
 struct EntityClassData {
     // singular generic name of an object of this class (e.g. "entity")
     const char* name;
@@ -51,15 +52,15 @@ struct EntityClassData {
     DescriptionAppendFunction append_description;
     // sizeof(Entity::entity_data)
     size_t metadata_size;
+    int flags;
     // the type that uniquely defines this class
     enum EntityClass type;
 };
 
 typedef struct _Entity { // this struct is fail-fast (less bug-prone) if the first element is NOT a pointer
-    int flags;
-    void* entity_data; // the entity meta-data
-
     const struct EntityClassData* class;
+
+    void* entity_data; // the entity meta-data
 
     WorldChunk* chunk;
     Vector3i position;

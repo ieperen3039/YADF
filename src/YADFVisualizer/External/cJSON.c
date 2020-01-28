@@ -1028,7 +1028,7 @@ CJSON_PUBLIC(cJSON *) cJSON_ParseWithOpts(const char *value, const char **return
     }
 
     buffer.content = (const unsigned char*)value;
-    buffer.length = strlen((const char*)value) + sizeof("");
+    buffer.length = strlen((const char*)value) + sizeof(char);
     buffer.offset = 0;
     buffer.hooks = global_hooks;
 

@@ -61,6 +61,7 @@ static inline List* list_init(List* list, size_t element_size, int capacity) {
 /// inverts an init operation, freeing allocated data (but not the list itself)
 static void list_free(List* list) {
     free(list->_data);
+    list->_data = NULL;
 }
 
 /// get the address of the element at the given index without bounds checking
@@ -140,8 +141,10 @@ static inline ErrorCode list_delete_index(List* list, int index) {
     void* tgt = list_get_checked(list, index);
     if (!tgt) return ERROR_OUT_OF_BOUNDS;
 
-    size_t copy_size = ((list->_size - index) * list->_element_size);
-    memmove(tgt, tgt + list->_element_size, copy_size);
+    size_t copy_size = ((list->_size - 1 - index) * list->_element_size);
+    if (copy_size > 0) {
+        memmove(tgt, tgt + list->_element_size, copy_size);
+    }
     list->_size -= 1;
 
     return ERROR_NONE;
@@ -276,9 +279,9 @@ PURE static inline ListIterator list_iterator(const List* list) {
             list->_element_size,
             list->_data,
             list_get(list, list->_size),
-    #ifndef NDEBUG
+#ifndef NDEBUG
             list,
-    #endif
+#endif
     };
 }
 
@@ -287,9 +290,9 @@ PURE static inline ListIterator list_iterator_empty() {
             0,
             NULL,
             NULL,
-    #ifndef NDEBUG
+#ifndef NDEBUG
             NULL,
-    #endif
+#endif
     };
 }
 
@@ -321,9 +324,9 @@ PURE static inline ListIterator list_sublist_iterator(const List* list, int star
             list->_element_size,
             list_get(list, start_index),
             list_get(list, end_index),
-    #ifndef NDEBUG
+#ifndef NDEBUG
             list,
-    #endif
+#endif
     };
 }
 

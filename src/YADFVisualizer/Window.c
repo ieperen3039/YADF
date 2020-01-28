@@ -115,6 +115,9 @@ bool visualizer_has_error(Visualizer* vis) {
 
 void visualizer_free(Visualizer* vis) {
     shader_free(vis->shader);
+    for (int i = 0; i < EntityClassSize; ++i) {
+        sprite_free(vis->entity_sprites[i]);
+    }
     glfwDestroyWindow(vis->window);
     glfwTerminate();
     free(vis);

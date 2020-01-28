@@ -28,18 +28,20 @@ void test_world_new(CuTest* tc) {
     World* world = world_new(INT_MAX);
     CuAssertPtrNotNull(tc, world);
     unsigned long long n_ch = 1 << world->depth;
+    unsigned char depth = world->depth;
+
+    world_free(world);
 
     printf(
             "Maximum world size is %llu tiles wide, containing %llu chunks per z-level, with a tree depth of %d\n",
-            n_ch * CHUNK_LENGTH, n_ch * n_ch, world->depth
+            n_ch * CHUNK_LENGTH, n_ch * n_ch, depth
     );
 }
 
 void test_world_tile_data(CuTest* tc) {
     World* world = world_new(100);
-    WorldTile base_tile = {LIST_EMPTY, TILE_FLAG_VISIBLE};
     BoundingBox area = (BoundingBox) {-AREA_SIZE, -AREA_SIZE, -AREA_SIZE, AREA_SIZE, AREA_SIZE, AREA_SIZE};
-    world_initialize_area(world, area, base_tile);
+    world_initialize_area(world, area, TILE_FLAG_VISIBLE);
 
     Vector3i zero = (Vector3i) {0, 0, 0};
     WorldTile* tile1 = world_get_tile(world, &zero);
@@ -47,20 +49,20 @@ void test_world_tile_data(CuTest* tc) {
     tile1->flags |= TILE_FLAG_BLOCKING;
 
     Vector3i pos2 = (Vector3i) {AREA_MIN_2, -AREA_MIN_2, -AREA_MIN_2};
-    WorldTile* tile2 = world_get_tile(world, &zero);
+    WorldTile* tile2 = world_get_tile(world, &pos2);
     CuAssertTrue(tc, tile2->flags & TILE_FLAG_VISIBLE);
     tile2->flags |= TILE_FLAG_BLOCKING;
 
     WorldTile* tile3 = world_get_tile(world, &zero);
     CuAssertPtrEquals(tc, tile3, tile1); // must point to the exact same tile
     CuAssertTrue(tc, tile2->flags & TILE_FLAG_BLOCKING);
+    world_free(world);
 }
 
 void test_world_iterator(CuTest* tc) {
     World* world = world_new(100);
-    WorldTile base_tile = {LIST_EMPTY, TILE_FLAG_VISIBLE};
     BoundingBox area = (BoundingBox) {-AREA_SIZE, -AREA_SIZE, -AREA_SIZE, AREA_SIZE, AREA_SIZE, AREA_SIZE};
-    world_initialize_area(world, area, base_tile);
+    world_initialize_area(world, area, TILE_FLAG_VISIBLE);
 
     Vector3i positions[] = {
             {1,           2,  3},
@@ -126,6 +128,7 @@ void test_world_iterator(CuTest* tc) {
             }
         }
     }
+    world_free(world);
 }
 
 int test_direction(CuTest* tc, WorldDirectionalIterator* itr, const int x_dir, const int y_dir) {
@@ -138,7 +141,7 @@ int test_direction(CuTest* tc, WorldDirectionalIterator* itr, const int x_dir, c
         WorldTileData tile = world_directional_iterator_next(itr);
         Vector3i tile_coord = tile.coord;
 
-        for (int i = 0; i < list_get_size(&seen); ++i) {
+        for (int i = 0; i < list_size(&seen); ++i) {
             Vector3i* other = list_get(&seen, i);
 
             CuAssert(tc, "Tile has been returned before", !vectori_equals(other, &tile_coord));
@@ -161,16 +164,15 @@ int test_direction(CuTest* tc, WorldDirectionalIterator* itr, const int x_dir, c
         list_add(&seen, &tile_coord);
     }
     
-    int nr_seen = list_get_size(&seen);
+    int nr_seen = list_size(&seen);
     list_free(&seen);
     return nr_seen;
 }
 
 void test_world_directional_itr_small(CuTest* tc) {
     World* world = world_new(100);
-    WorldTile base_tile = {LIST_EMPTY, TILE_FLAG_VISIBLE};
     BoundingBox area = (BoundingBox) {-10, -10, -10, 10, 10, 10};
-    world_initialize_area(world, area, base_tile);
+    world_initialize_area(world, area, TILE_FLAG_VISIBLE);
 
     { // base case
         WorldDirectionalIterator itr = world_directional_iterator(world, &VECTOR_ZERO, 2, 2, false, false, -2);
@@ -210,13 +212,13 @@ void test_world_directional_itr_small(CuTest* tc) {
         int i = test_direction(tc, &itr, -1, 1);
         CuAssert(tc, "Not enough tiles returned", i > 100);
     }
+    world_free(world);
 }
 
 void test_world_directional_itr_large(CuTest* tc) {
     World* world = world_new(200);
-    WorldTile base_tile = {LIST_EMPTY, TILE_FLAG_VISIBLE};
     BoundingBox area = (BoundingBox) {-AREA_SIZE, -AREA_SIZE, -AREA_SIZE, AREA_SIZE, AREA_SIZE, AREA_SIZE};
-    world_initialize_area(world, area, base_tile);
+    world_initialize_area(world, area, TILE_FLAG_VISIBLE);
 
     Vector3i positions[] = {
             {1,           2,  3},
@@ -236,6 +238,7 @@ void test_world_directional_itr_large(CuTest* tc) {
         WorldTile* tile = world_get_tile(world, &positions[i]);
         tile->flags |= TILE_FLAG_BLOCKING;
     }
+    world_free(world);
 }
 
 CuSuite* world_suite(void) {

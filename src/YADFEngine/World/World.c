@@ -26,6 +26,7 @@ struct _World {
     unsigned char depth;
 
     List entities_to_update;
+    List fluids_to_update;
 };
 
 #define index(x, y, z) ((x) + (y) * CHUNK_LENGTH + (z) * CHUNK_LENGTH * CHUNK_LENGTH)
@@ -33,13 +34,15 @@ struct _World {
 struct _WorldChunk {
     // (x, y, z) is at tiles[x + y * CHUNK_LENGTH + z * CHUNK_LENGTH * CHUNK_LENGTH], == tiles[index(x, y, z)];
     WorldTile tiles[CHUNK_LENGTH * CHUNK_LENGTH * CHUNK_LENGTH];
-    // parent quadrant of this chunk
-    WorldQuadrant* parent;
-    // position of tiles[0]
-    Vector3i zero_pos;
+  ElementMap fluids;
+  // parent quadrant of this chunk
+  WorldQuadrant* parent;
+  // position of grid[0][0][0]
+  Vector3i zero_pos;
 };
 
 WorldQuadrant* new_quadrant(AllocatorSM* allocator, WorldQuadrant* parent, int index) {
+    assert(parent->height > 0);
     WorldQuadrant* elt = allocator_sm_alloc(allocator);
 
     parent->childs[index] = elt;
@@ -66,11 +69,17 @@ WorldQuadrant* new_quadrant(AllocatorSM* allocator, WorldQuadrant* parent, int i
     return elt;
 }
 
-void init_quadrant_leaf(WorldQuadrant* quadrant, const WorldTile initial_tile) {
+void init_tile(WorldTile* tile, int flags, int index) {
+  tile->flags = flags;
+  tile->index = index;
+  list_init(&tile->entity_ptrs, sizeof(void*), 0);
+}
+
+void init_quadrant_leaf(WorldQuadrant* quadrant, int initial_flags) {
     WorldChunk* chunks = malloc(8 * sizeof(WorldChunk));
 
     for (int i = 0; i < 8; ++i) {
-        WorldChunk* chunk_section = (WorldChunk*) chunks + i;
+        WorldChunk* chunk_section = chunks + i;
 
         chunk_section->parent = quadrant;
         Vector3i pos = quadrant->middle_pos;
@@ -80,12 +89,10 @@ void init_quadrant_leaf(WorldQuadrant* quadrant, const WorldTile initial_tile) {
         chunk_section->zero_pos = pos;
 
         for (int j = 0; j < (CHUNK_LENGTH * CHUNK_LENGTH * CHUNK_LENGTH); ++j) {
-            chunk_section->tiles[j] = initial_tile;
-            // we are not going to copy the entities, so clear the list to be sure
-            if (list_size(&initial_tile.entity_ptrs) > 0) {
-                list_clear(&chunk_section->tiles[j].entity_ptrs);
-            }
+          WorldTile* tile = &chunk_section->tiles[j];
+          init_tile(tile, initial_flags, j);
         }
+        map_init(&chunk_section->fluids, sizeof(FluidFlow));
 
         quadrant->leaves[i] = chunk_section;
     }
@@ -267,25 +274,28 @@ PURE WorldChunk* get_chunk_from_quad(WorldQuadrant* quadrant, Vector3ic* coord, 
     return get_chunk_under_quad(quadrant, coord, allocator);
 }
 
-PURE WorldTile* world_get_tile_from_chunk(WorldChunk* chunk, Vector3ic* coord) {
-    assert(chunk != NULL);
+bool chunk_contains(const WorldChunk* chunk, Vector3ic* coord) {
     Vector3i c_zero = chunk->zero_pos;
-
-    bool contains_pos = coord->z > c_zero.z && coord->y > c_zero.y && coord->x > c_zero.x &&
+    return coord->z > c_zero.z && coord->y > c_zero.y && coord->x > c_zero.x &&
                         coord->x < c_zero.x + CHUNK_LENGTH &&
                         coord->y < c_zero.y + CHUNK_LENGTH &&
                         coord->z < c_zero.z + CHUNK_LENGTH;
+}
+
+PURE WorldTile* world_get_tile_from_chunk(WorldChunk* chunk, Vector3ic* coord) {
+    assert(chunk != NULL);
+    bool contains_pos = chunk_contains(chunk, coord);
 
     if (!contains_pos) {
         chunk = get_chunk_from_quad(chunk->parent, coord, NULL);
         if (chunk == NULL) return NULL;
-        c_zero = chunk->zero_pos;
     }
 
+    Vector3i c_zero = chunk->zero_pos;
     return &(chunk->tiles[index(coord->x - c_zero.x, coord->y - c_zero.y, coord->z - c_zero.z)]);
 }
 
-int world_initialize_area(World* world, const BoundingBox area, const WorldTile initial_tile) {
+int world_initialize_area(World* world, const BoundingBox area, int initial_flags) {
     int initialized_chunks = 0;
 
     Vector3i coord = (Vector3i) {area.xMin, area.yMin, area.zMin};
@@ -305,7 +315,7 @@ int world_initialize_area(World* world, const BoundingBox area, const WorldTile 
                 quadrant = get_quad_from_quad(quadrant, &tgt_coord, world->quad_allocator);
 
                 if (quadrant->leaves[0] == NULL) {
-                    init_quadrant_leaf(quadrant, initial_tile);
+                    init_quadrant_leaf(quadrant, initial_flags);
                     initialized_chunks += 4;
                 }
             }
@@ -343,6 +353,7 @@ World* world_new(int world_min_size) {
     new_world->chunks = elt;
     new_world->depth = depth;
     list_init(&new_world->entities_to_update, sizeof(struct _Entity*), WORLD_DEFAULT_ENTITY_LIST_CAPACITY);
+    list_init(&new_world->fluids_to_update, sizeof(FluidUpdateData), WORLD_DEFAULT_ENTITY_LIST_CAPACITY);
     LOG_INFO_F("Created world with %d layers", new_world->depth);
 
     return new_world;
@@ -352,7 +363,17 @@ void free_quad(WorldQuadrant* quad) {
     if (quad == NULL) return;
 
     if (quad->height == 0) {
-        free(quad->leaves); // chunks are allocated per 8
+        // free leaf quadrant
+        for (int i = 0; i < 8; ++i) {
+            // free chunk
+            WorldChunk* chunk = quad->leaves[i];
+            for (int j = 0; j < CHUNK_LENGTH * CHUNK_LENGTH * CHUNK_LENGTH; ++j) {
+                // free tile
+                list_free(&(chunk->tiles[j].entity_ptrs));
+            }
+            map_free(&chunk->fluids);
+        }
+        free(quad->leaves[0]); // chunks are allocated per 8
 
     } else {
         for (int i = 0; i < 8; ++i) {
@@ -360,11 +381,21 @@ void free_quad(WorldQuadrant* quad) {
         }
     }
 
-    // quad itself is allocated in world.quad_allocator
+    // quad data itself is allocated in world.quad_allocator
+}
+
+WorldChunk* world_get_chunk_from_chunk(WorldChunk* chunk, Vector3ic* coord) {
+  if (chunk_contains(chunk, coord)) {
+    return chunk;
+  } else {
+    return get_chunk_from_quad(chunk->parent, coord, NULL);
+  }
 }
 
 void world_free(World* world) {
     free_quad(world->chunks);
+    list_free(&world->entities_to_update);
+    list_free(&world->fluids_to_update);
     allocator_sm_free(world->quad_allocator);
     free(world);
 }
@@ -499,23 +530,70 @@ WorldTile* world_get_tile(World* world, Vector3ic* coord) {
     return get_tile_under_quad(world->chunks, coord);
 }
 
+WorldChunk* world_get_chunk(World* world, Vector3ic* coord) {
+    return get_chunk_under_quad(world->chunks, coord, NULL);
+}
+
 void world_tile_init(WorldTile* base_tile, char flags) {
     base_tile->flags = flags;
     list_init(&base_tile->entity_ptrs, sizeof(void*), 0);
 }
 
-void world_tile_add_entity(WorldTileData tile, Entity* entity, WorldChunk* chunk) {
+
+void world_tile_add_entity(Entity* entity, WorldChunk* chunk, WorldTile* tile, Vector3ic* coord) {
     entity->chunk = chunk;
-    entity->position = tile.coord;
-    list_add(&tile.elt->entity_ptrs, &entity);
+    entity->position = *coord;
+
+    if (entity->class->flags & ENTITY_FLAG_BLOCKING) {
+        tile->flags |= TILE_FLAG_BLOCKING;
+    }
+
+    list_add(&tile->entity_ptrs, &entity);
 }
 
-FluidFlow* world_tile_get_fluid(WorldTile* tile, WorldChunk* chunk) {
-  if (tile->fluids == NULL){
-  }
-  return tile->fluids;
+List* world_get_fluids_to_update(World* world) {
+    return &world->fluids_to_update;
 }
 
-FluidFlow* world_get_fluid(Vector3ic* coord, WorldChunk* chunk) {
-  return world_tile_get_fluid(world_get_tile_from_chunk(chunk, coord), chunk);
+void world_tile_remove_entity(WorldTile* tile, Entity* entity) {
+    list_delete_value(&tile->entity_ptrs, &entity);
+
+    if (entity->class->flags & ENTITY_FLAG_BLOCKING) {
+        bool blocking = false;
+        for (int i = 0; i < list_size(&tile->entity_ptrs); ++i) {
+            Entity** ety = list_get(&tile->entity_ptrs, i);
+            if ((*ety)->class->flags & ENTITY_FLAG_BLOCKING) {
+                blocking = true;
+                break;
+            }
+        }
+        if (!blocking) {
+            tile->flags &= ~ENTITY_FLAG_BLOCKING;
+        }
+    }
+}
+
+FluidFlow* tile_get_fluid(WorldTile* tile, WorldChunk* chunk) {
+    FluidFlow* fluid = map_get(&chunk->fluids, tile->index);
+    if (!fluid) {
+        FluidFlow new_fluid = (FluidFlow) {};
+        fluid = map_insert(&chunk->fluids, tile->index, &new_fluid);
+    }
+    return fluid;
+}
+
+FluidFlow* world_get_fluid(World* world, Vector3ic* coord) {
+    WorldChunk* chunk = get_chunk_from_quad(world->chunks, coord, NULL);
+    if (chunk == NULL) return NULL;
+
+    WorldTile* tile = world_get_tile_from_chunk(chunk, coord);
+    return tile_get_fluid(tile, chunk);
+}
+
+Vector3i world_get_tile_coord(WorldTile* tile, WorldChunk* parent) {
+    Vector3i pos = parent->zero_pos;
+    int ix = tile->index % (CHUNK_LENGTH * CHUNK_LENGTH);
+    int iy = (tile->index % (CHUNK_LENGTH)) / CHUNK_LENGTH;
+    int iz = tile->index / (CHUNK_LENGTH * CHUNK_LENGTH);
+    return (Vector3i) {ix, iy, iz};
 }

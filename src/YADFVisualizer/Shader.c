@@ -132,7 +132,7 @@ static inline GLuint create_shader(const char* shader_text, int type) {
     GLint status = 0;
     glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
     if (status != GL_TRUE) {
-        LOG_ERROR("Error in shader");
+        LOG_ERROR_F("Error in shader %x", type);
         printShaderLog(shader);
         return 0;
     }

@@ -36,6 +36,8 @@ void test_map_add_get(CuTest* tc) {
     // overwrite key
     map_insert(map, 2, &elements[7]);
     CuAssertDblEquals(tc, elements[7], *(TYPE*) map_get(map, 2), 0);
+
+    map_free(map);
 }
 
 void test_map_remove_contains(CuTest* tc) {
@@ -60,6 +62,8 @@ void test_map_remove_contains(CuTest* tc) {
     CuAssertPtrEquals(tc, NULL, map_get(map, 5));
     CuAssertDblEquals(tc, elements[4], *(TYPE*) map_get(map, 4), 0);
     CuAssertDblEquals(tc, elements[2], *(TYPE*) map_get(map, 2), 0);
+
+    map_free(map);
 }
 
 void test_map_compute_absent(CuTest* tc) {
@@ -76,11 +80,16 @@ void test_map_compute_absent(CuTest* tc) {
     list_add(list1, &elements[0]);
     list_add(list1, &elements[1]);
 
-    CuAssertIntEquals(tc, 0, list_get_size(list2));
+    CuAssertIntEquals(tc, 0, list_size(list2));
     list_add(list2, &elements[3]);
 
     CuAssertDblEquals(tc, elements[1], *(TYPE*) list_get(list1, 1), 0);
     CuAssertDblEquals(tc, elements[3], *(TYPE*) list_get(list2, 0), 0);
+
+    list_free(list1);
+    list_free(list2);
+
+    map_free(map);
 }
 
 void test_map_overload(CuTest* tc) {
@@ -156,6 +165,7 @@ CuSuite* map_suite(void) {
     SUITE_ADD_TEST(suite, test_map_remove_contains);
     SUITE_ADD_TEST(suite, test_map_compute_absent);
     SUITE_ADD_TEST(suite, test_map_overload);
+    SUITE_ADD_TEST(suite, test_map_empty);
 
     return suite;
 }

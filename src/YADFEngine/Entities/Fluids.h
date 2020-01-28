@@ -9,13 +9,13 @@
 #include <stdint-gcc.h>
 #include "WorldAPI.h"
 
-#define AMOUNT_MAX 255
+#define FLUID_AMOUNT_MAX 255
 typedef uint8_t FluidAmount;
 
 ENUM(FluidType,
      WATER,
      FIRE,
-);
+)
 
 // this is a property list, which contains an entry for each FluidType.
 // Usage: float water_weight = FluidProperties[WATER].weight;
@@ -48,6 +48,8 @@ typedef struct _FluidFlow {
   FluidAmount flow_out_zn;
 } FluidFlow;
 
+void fluid_spawn(World* world, Vector3ic* coord, enum FluidType type, FluidAmount amount);
+
 /**
  * calculates the flow out of this tile, without changing flows or amounts of other tiles.
  * Is thread-safe with other calls to this function.
@@ -57,7 +59,7 @@ typedef struct _FluidFlow {
  * @param tile the tile with the fluid
  * @param tile_chunk the chunk containing tile
  */
-void fluid_flow_update(FluidFlow* this, Vector3i position, WorldTile* tile, WorldChunk* tile_chunk);
+void fluid_flow_update(FluidFlow* this, Vector3i position, WorldChunk* tile_chunk);
 
 /**
  * calculates the new amount of fluids on this tile for each type. One must call fluid_flow_update on all nearby tiles before this function.
@@ -66,6 +68,6 @@ void fluid_flow_update(FluidFlow* this, Vector3i position, WorldTile* tile, Worl
  * @param position
  * @param tile_chunk
  */
-void fluid_amount_update(WorldTile* tile, Vector3i position, WorldChunk* tile_chunk);
+void fluid_amount_update(FluidFlow* this, Vector3i position, WorldChunk* tile_chunk);
 
 #endif //YADF_FLUIDS_H

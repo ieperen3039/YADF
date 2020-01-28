@@ -7,10 +7,7 @@
 #define SEED 12
 
 void generator_generate_default(World* world, BoundingBox area) {
-    WorldTile base_tile;
-    world_tile_init(&base_tile, TILE_FLAG_VISIBLE | TILE_FLAG_DISCOVERED);
-
-    int new_chunks = world_initialize_area(world, area, base_tile);
+    int new_chunks = world_initialize_area(world, area, TILE_FLAG_VISIBLE | TILE_FLAG_DISCOVERED);
 
     struct osn_context* noise;
     open_simplex_noise(SEED, &noise);
@@ -34,10 +31,12 @@ void generator_generate_default(World* world, BoundingBox area) {
 
             if (noise_value > -1) {
                 Entity* rock = entity_new(NATURAL_WALL, &data);
-                world_tile_add_entity(tile, rock, chunk.elt);
+                world_tile_add_entity(rock, chunk.elt, tile.elt, &tile.coord);
             }
         }
     }
+
+    open_simplex_noise_free(noise);
 
     LOG_INFO_F("Initialized %d new chunks", new_chunks);
 }

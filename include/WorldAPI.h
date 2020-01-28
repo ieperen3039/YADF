@@ -19,12 +19,11 @@
 typedef struct _FluidFlow FluidFlow;
 
 typedef struct {
+    int index; // index of this tile in parent chunk
     // items on this tile
     List entity_ptrs; // type = Entity*
-    // fluids on this tile
-    FluidFlow* fluids; // pointer to save space, store in chunk
     // various TILE_FLAGs
-    char flags;
+    int flags;
 } WorldTile;
 
 typedef struct _World World;
@@ -39,6 +38,10 @@ typedef struct _WorldQuadrant WorldQuadrant;
  */
 YADF_API WorldTile* world_get_tile(World* world, Vector3ic* coord);
 
+YADF_API WorldChunk* world_get_chunk(World* world, Vector3ic* coord);
+
+YADF_API PURE Vector3i world_get_tile_coord(WorldTile* tile, WorldChunk* parent);
+
 /**
  * given a nearby chunk, returns the tile on the given position.
  * This is likely to be faster than world_get_tile if pos is indeed close to the given chunk
@@ -46,7 +49,9 @@ YADF_API WorldTile* world_get_tile(World* world, Vector3ic* coord);
  * @param pos the coordinate of the requested tile
  * @return the tile on the given coordinate, or NULL if this one is in an unloaded chunk.
  */
-YADF_API PURE WorldTile* world_get_tile_from_chunk(WorldChunk* chunk, Vector3ic* coord);
+YADF_API WorldTile* world_get_tile_from_chunk(WorldChunk* chunk, Vector3ic* coord);
+
+YADF_API WorldChunk* world_get_chunk_from_chunk(WorldChunk* chunk, Vector3ic* coord);
 
 typedef struct {
     WorldQuadrant* targetQuad;
@@ -127,10 +132,10 @@ YADF_API WorldTileData world_directional_iterator_next(WorldDirectionalIterator*
 
 YADF_API bool world_directional_iterator_has_next(WorldDirectionalIterator* itr);
 
-YADF_API Vector3ic* chunk_get_position(WorldChunk* chunk);
+YADF_API PURE Vector3ic* chunk_get_position(WorldChunk* chunk);
 
-YADF_API FluidFlow* world_get_fluid(Vector3ic* coord, WorldChunk* chunk);
+YADF_API FluidFlow* world_get_fluid(World* world, Vector3ic* coord);
 
-YADF_API FluidFlow* world_tile_get_fluid(WorldTile* tile, WorldChunk* chunk);
+YADF_API FluidFlow* tile_get_fluid(WorldTile* tile, WorldChunk* chunk);
 
 #endif //YADF_WORLDAPI_H

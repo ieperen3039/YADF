@@ -24,7 +24,7 @@
     #include <unistd.h>
 
     #define INIT_TIME
-    #define wait_for(time_ms) usleep((time_ms) * 1e6)
+    #define wait_for(time_ms) usleep((time_ms) * 1e3)
     #define set_current_millis(var) {struct timespec ts = {0, 0}; clock_gettime(0, &ts); var = (ts.tv_nsec / 1e6 + (time_t) ts.tv_sec * 1e3);}
 
 #else

@@ -30,7 +30,7 @@ void test_list_add_get(CuTest* tc) {
     list_add(list, &elements[2]);
     CuAssertDblEquals(tc, elements[2], *((TYPE*) list_get(list, 2)), 0);
 
-    CuAssertIntEquals(tc, 3, list_get_size(list));
+    CuAssertIntEquals(tc, 3, list_size(list));
 
     list_free(list);
 }
@@ -54,7 +54,7 @@ void test_list_set(CuTest* tc) {
     CuAssertIntEquals(tc, ERROR_OUT_OF_BOUNDS, ec3);
 
     CuAssertPtrEquals(tc, NULL, list_get_checked(list, 4));
-    CuAssertIntEquals(tc, 4, list_get_size(list));
+    CuAssertIntEquals(tc, 4, list_size(list));
 
     CuAssertPtrEquals(tc, NULL, list_get_checked(list, -1));
     CuAssertPtrEquals(tc, NULL, list_get_checked(list, INT_MAX));
@@ -88,12 +88,12 @@ void test_list_delete_index(CuTest* tc) {
     CuAssertDblEquals(tc, elements[2], *((TYPE*) list_get_checked(list, 1)), 0);
     CuAssertDblEquals(tc, elements[3], *((TYPE*) list_get_checked(list, 2)), 0);
     CuAssertPtrEquals(tc, NULL, list_get_checked(list, 3));
-    CuAssertIntEquals(tc, 3, list_get_size(list));
+    CuAssertIntEquals(tc, 3, list_size(list));
 
     // check whether the next element is added at the right position
     list_add(list, &elements[4]);
     CuAssertDblEquals(tc, elements[4], *((TYPE*) list_get_checked(list, 3)), 0);
-    CuAssertIntEquals(tc, 4, list_get_size(list));
+    CuAssertIntEquals(tc, 4, list_size(list));
 
     list_free(list);
 }
@@ -130,7 +130,7 @@ void test_list_delete_value(CuTest* tc) {
     CuAssertDblEquals(tc, elements[2], *((TYPE*) list_get_checked(list, 1)), 0);
     CuAssertDblEquals(tc, elements[3], *((TYPE*) list_get_checked(list, 2)), 0);
     CuAssertPtrEquals(tc, NULL, list_get_checked(list, 3));
-    CuAssertIntEquals(tc, 3, list_get_size(list));
+    CuAssertIntEquals(tc, 3, list_size(list));
 
     list_free(list);
 }
@@ -139,15 +139,15 @@ void test_list_pop_push(CuTest* tc) {
     List* list = new_list();
     list_push(list, &elements[0]);
     list_push(list, &elements[1]);
-    CuAssertIntEquals(tc, 2, list_get_size(list));
+    CuAssertIntEquals(tc, 2, list_size(list));
 
     list_push(list, &elements[2]);
     list_push(list, &elements[3]);
-    CuAssertIntEquals(tc, 4, list_get_size(list));
+    CuAssertIntEquals(tc, 4, list_size(list));
 
     CuAssertDblEquals(tc, elements[3], *((TYPE*) list_pop(list)), 0);
     CuAssertDblEquals(tc, elements[2], *((TYPE*) list_pop(list)), 0);
-    CuAssertIntEquals(tc, 2, list_get_size(list));
+    CuAssertIntEquals(tc, 2, list_size(list));
 
     CuAssertPtrEquals(tc, NULL, list_get_checked(list, 2));
     CuAssertDblEquals(tc, elements[1], *((TYPE*) list_get_checked(list, 1)), 0);
@@ -182,7 +182,7 @@ void test_list_iterators(CuTest* tc) {
     CuAssertDblEquals(tc, elements[2], *((TYPE*) list_get_checked(list, 2)), 0);
     CuAssertDblEquals(tc, elements[3], *((TYPE*) list_get_checked(list, 3)), 0);
     CuAssertPtrEquals(tc, NULL, list_get_checked(list, 4));
-    CuAssertIntEquals(tc, 4, list_get_size(list));
+    CuAssertIntEquals(tc, 4, list_size(list));
 
     list_free(list);
 }
@@ -204,7 +204,7 @@ void test_list_pack(CuTest* tc) {
     list_pop(list);
     list_pop(list);
 
-    CuAssertIntEquals(tc, 4, list_get_size(list));
+    CuAssertIntEquals(tc, 4, list_size(list));
 
     size_t data_size_before_pack = list_get_data_size(list);
 
@@ -239,7 +239,7 @@ void test_list_zero(CuTest* tc) {
     CuAssertPtrEquals(tc, NULL, list_get_checked(list, 0));
     CuAssertPtrEquals(tc, NULL, list_get_checked(list, 1));
 
-    CuAssertIntEquals(tc, 0, list_get_size(list));
+    CuAssertIntEquals(tc, 0, list_size(list));
 
     CuAssertIntEquals(tc, ERROR_OUT_OF_BOUNDS, list_set(list, 0, &elements[0]));
     CuAssertIntEquals(tc, ERROR_OUT_OF_BOUNDS, list_set(list, 1, &elements[1]));
@@ -252,7 +252,7 @@ void test_list_zero(CuTest* tc) {
 
     list_clear(list);
     list_pack(list);
-    CuAssertIntEquals(tc, 0, list_get_size(list));
+    CuAssertIntEquals(tc, 0, list_size(list));
 
     list_free(list);
     free(list);
@@ -279,7 +279,7 @@ void test_list_overload(CuTest* tc) {
     CuAssertDblEquals(tc, elements[0], *((TYPE*) list_get_checked(list, 10)), 0);
     CuAssertDblEquals(tc, elements[1], *((TYPE*) list_get_checked(list, 11)), 0);
     CuAssertPtrEquals(tc, NULL, list_get_checked(list, 12));
-    CuAssertIntEquals(tc, 12, list_get_size(list));
+    CuAssertIntEquals(tc, 12, list_size(list));
     { // iterator
         ListIterator itr = list_iterator(list);
         int i = 0;
@@ -306,7 +306,7 @@ void test_list_overload(CuTest* tc) {
     CuAssertDblEquals(tc, elements[8], *((TYPE*) list_get_checked(list, 8)), 0);
     CuAssertDblEquals(tc, elements[1], *((TYPE*) list_get_checked(list, 10)), 0);
     CuAssertPtrEquals(tc, NULL, list_get_checked(list, 11));
-    CuAssertIntEquals(tc, 11, list_get_size(list));
+    CuAssertIntEquals(tc, 11, list_size(list));
 
     list_free(list);
     free(list);
@@ -314,7 +314,7 @@ void test_list_overload(CuTest* tc) {
 
 void test_list_empty(CuTest* tc) {
     CuAssertTrue(tc, list_is_empty(&LIST_EMPTY));
-    CuAssertIntEquals(tc, list_get_size(&LIST_EMPTY), 0);
+    CuAssertIntEquals(tc, list_size(&LIST_EMPTY), 0);
 }
 
 CuSuite* list_suite(void) {

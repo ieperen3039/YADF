@@ -2,7 +2,11 @@ add_executable(
         unit_test EXCLUDE_FROM_ALL
         test_main.c
         CuTest.c
+
         ../src/YADFEngine/DataStructures/StaticMonoAllocator.c
+        ../src/YADFEngine/Entities/EntityRead.c
+        ../src/YADFEngine/Entities/EntityWrite.c
+        ../src/YADFEngine/Entities/EntityClass.c
 )
 
 target_link_libraries(

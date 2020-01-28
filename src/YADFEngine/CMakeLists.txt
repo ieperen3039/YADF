@@ -24,7 +24,9 @@ add_library(
         Entities/EntityClass.c
         Entities/EntityWrite.c
         World/World.c
-        Entities/EntityRead.c Entities/EntityRead.h)
+        Entities/EntityRead.c
+)
+
 target_compile_definitions(YADFEngine PRIVATE YADF_BUILD)
 
 

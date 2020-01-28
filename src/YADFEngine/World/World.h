@@ -29,20 +29,29 @@ void world_free(World* world);
  * @param area minimum area to initialize
  * @return the number of newly initialized chunks
  */
-int world_initialize_area(World* world, const BoundingBox area, const WorldTile initial_tile);
+int world_initialize_area(World* world, const BoundingBox area, int initial_flags);
 
 /**
- * returns an iterator over all entities requiring an update
+ * returns a list of type Entity* of all entities requiring an update
  * */
 PURE List* world_get_entities_to_update(World* world);
 
-void world_tile_init(WorldTile* base_tile, char flags);
+typedef struct {
+  FluidFlow* element;
+  WorldChunk* chunk;
+  Vector3i coord;
+} FluidUpdateData;
+
+/// returns a list of type FluidUpdateData
+PURE List* world_get_fluids_to_update(World* world);
 
 /**
  * Adds the given entity to the tile
  * @param tile the tile to add this entity's pointer to
  * @param the entity whomst pointer must be added to this list
  */
-void world_tile_add_entity(WorldTileData tile, Entity* entity, WorldChunk* chunk);
+void world_tile_add_entity(Entity* entity, WorldChunk* chunk, WorldTile* tile, Vector3ic* coord);
+
+void world_tile_remove_entity(WorldTile* tile, Entity* entity);
 
 #endif //YADF2_WORLD_H

@@ -13,6 +13,8 @@ void sprite_init();
 
 Sprite* sprite_new(const char* filename);
 
+void sprite_free(Sprite* sprite);
+
 void sprite_draw(const Sprite* sprite, Shader* shader);
 
 #endif //YADF_SPRITE_H

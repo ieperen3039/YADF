@@ -47,4 +47,5 @@ YADF_API World* yadf_get_world(YADFEngine* engine) {
 YADF_API void yadf_free(YADFEngine* engine) {
     update_workers_free(engine->workers);
     world_free(engine->world);
+    free(engine);
 }

@@ -26,7 +26,7 @@ static char* tool_read_file(const char* filename, int* strlen){
     rewind(fp);
 
     // allocate memory to contain the whole file:
-    char* buffer = (char*) malloc(sizeof(char) * lSize);
+    char* buffer = malloc(sizeof(char) * lSize + 1);
     if (buffer == NULL) {
         LOG_ERROR_F("Memory error: %s", strerror(errno));
         return NULL;

@@ -15,7 +15,6 @@ Entity* entity_new(enum EntityClass type, const void* initial_data) {
     );
 
     new_entity->class = class_data;
-    new_entity->flags = 0;
 
     void* data_ptr = new_entity + 1;
     if (class_data->metadata_size > 0) {

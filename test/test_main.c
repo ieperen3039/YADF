@@ -11,6 +11,7 @@ TYPE elements[] = {00, 11, 22, 33, 44, 55, 66, 77, 88, 99};
 #include "testList.h"
 #include "testMap.h"
 #include "testWorld.h"
+#include "testFluids.h"
 
 int main(int argc, char** argv) {
     CuString* output = CuStringNew();
@@ -19,11 +20,14 @@ int main(int argc, char** argv) {
     CuSuiteAddSuite(suite, list_suite());
     CuSuiteAddSuite(suite, map_suite());
     CuSuiteAddSuite(suite, world_suite());
+    CuSuiteAddSuite(suite, fluid_suite());
 
     CuSuiteRun(suite);
     CuSuiteSummary(suite, output);
     CuSuiteDetails(suite, output);
     printf("%s\n", output->buffer);
+
+    CuSuiteDelete(suite);
 
     list_cleanup();
     map_cleanup();

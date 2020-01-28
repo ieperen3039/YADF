@@ -3,28 +3,30 @@
 //
 
 #include "Fluids.h"
+#include "../World/World.h"
 
-PURE int fluid_at_tile(WorldTile* tile) {
-  if (tile->fluids == NULL) return 0;
+void fluid_spawn(World* world, Vector3ic* coord, enum FluidType type, FluidAmount amount) {
+  FluidFlow* target = world_get_fluid(world, coord);
+  target->amount[type] += amount;
+  target->amount_total += amount;
 
-  int amount = 0;
-  for (int i = 0; i < FluidTypeSize; ++i) {
-    amount = tile->fluids->amount[i];
-  }
-
-  return amount;
+  FluidUpdateData elt = {target, world_get_chunk(world, coord), *coord};
+  list_add(world_get_fluids_to_update(world), &elt);
 }
 
 /**
  * @return flow of a to b, 0 if b has more fluid than a
  */
-PURE static inline FluidAmount fluid_flow(WorldTile* a, WorldTile* b) {
+PURE static inline FluidAmount fluid_flow(WorldTile* a, WorldChunk* ac, WorldTile* b, WorldChunk* bc) {
   if (b->flags & TILE_FLAG_BLOCKING) return 0;
-  int flow = fluid_at_tile(a) - fluid_at_tile(b);
-  return (FluidAmount) min_i(AMOUNT_MAX, max_i(0, flow));
+
+  FluidFlow* flow1 = tile_get_fluid(a, ac);
+  FluidFlow* flow2 = tile_get_fluid(b, bc);
+  int flow = flow1->amount_total - flow2->amount_total;
+  return (FluidAmount) min_i(FLUID_AMOUNT_MAX, max_i(0, flow));
 }
 
-void fluid_flow_update(FluidFlow* this, Vector3i position, WorldTile* tile, WorldChunk* tile_chunk) {
+void fluid_flow_update(FluidFlow* this, Vector3i position, WorldChunk* tile_chunk) {
   // first cache fluid levels
   for (int i = 0; i < FluidTypeSize; ++i) {
     this->amount_prev[i] = this->amount[i];
@@ -44,9 +46,11 @@ void fluid_flow_update(FluidFlow* this, Vector3i position, WorldTile* tile, Worl
   FluidAmount max_flow[6] = {};
 
   // collect fluid level differences
+  WorldTile* tile = world_get_tile_from_chunk(tile_chunk, &position);
   for (int i = 0; i < 6; ++i) {
-    WorldTile* other_tile = world_get_tile_from_chunk(tile_chunk, &neighs[i]);
-    max_flow[i] = (other_tile == NULL) ? 0 : fluid_flow(tile, other_tile);
+    WorldChunk* other_chunk = world_get_chunk_from_chunk(tile_chunk, &neighs[i]);
+    WorldTile* other_tile = world_get_tile_from_chunk(other_chunk, &neighs[i]);
+    max_flow[i] = (other_tile == NULL) ? 0 : fluid_flow(tile, tile_chunk, other_tile, other_chunk);
   }
 
   // collect amount of fluid available
@@ -86,9 +90,9 @@ void fluid_flow_update(FluidFlow* this, Vector3i position, WorldTile* tile, Worl
   if (flow_budget <= 0) return;
 
   // reserve up to AMOUNT_MAX to not move at all
-  if (flow_budget > AMOUNT_MAX) {
-    this->flow_out_zp = flow_budget - AMOUNT_MAX; // if any is still left, push up
-    this->flow_out_total -= AMOUNT_MAX;
+  if (flow_budget > FLUID_AMOUNT_MAX) {
+    this->flow_out_zp = flow_budget - FLUID_AMOUNT_MAX; // if any is still left, push up
+    this->flow_out_total -= FLUID_AMOUNT_MAX;
   } else {
     this->flow_out_total -= flow_budget;
   }
@@ -96,7 +100,7 @@ void fluid_flow_update(FluidFlow* this, Vector3i position, WorldTile* tile, Worl
   assert(this->flow_out_xp + this->flow_out_yp + this->flow_out_zp + this->flow_out_xn + this->flow_out_yn + this->flow_out_zn == this->flow_out_total);
 }
 
-void fluid_amount_update(WorldTile* tile, Vector3i position, WorldChunk* tile_chunk) {
+void fluid_amount_update(FluidFlow* this, Vector3i position, WorldChunk* tile_chunk) {
   // all neighbour coordinates again, now immediately collect all neighbour fluid flows
   const Vector3i neighs[6] = {
           {position.x + 1, position.y,     position.z},
@@ -108,7 +112,9 @@ void fluid_amount_update(WorldTile* tile, Vector3i position, WorldChunk* tile_ch
   };
   const FluidFlow* neigh_fluids[6];
   for (int i = 0; i < 6; ++i) {
-    neigh_fluids[i] = world_get_tile_from_chunk(tile_chunk, &neighs[i])->fluids;
+    WorldChunk* other_chunk = world_get_chunk_from_chunk(tile_chunk, &neighs[i]);
+    WorldTile* other_tile = world_get_tile_from_chunk(other_chunk, &neighs[i]);
+    neigh_fluids[i] = tile_get_fluid(other_tile, other_chunk);
   }
 
   // collect total in-flow per type
@@ -122,8 +128,6 @@ void fluid_amount_update(WorldTile* tile, Vector3i position, WorldChunk* tile_ch
     type_in_flow[i] += neigh_fluids[4]->flow_out_yp * ((float) neigh_fluids[4]->amount_prev[i] / neigh_fluids[4]->amount_total_prev);
     type_in_flow[i] += neigh_fluids[5]->flow_out_zp * ((float) neigh_fluids[5]->amount_prev[i] / neigh_fluids[5]->amount_total_prev);
   }
-
-  FluidFlow* this = world_tile_get_fluid(tile, tile_chunk);
 
   // now just add all of these incoming flows current amounts
   // also accumulate totals

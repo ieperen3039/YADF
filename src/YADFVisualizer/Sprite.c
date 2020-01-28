@@ -81,8 +81,7 @@ void sprite_draw(const Sprite* sprite, Shader* shader) {
     glDisableVertexAttribArray(0);
 }
 
-void sprite_free(Sprite* sprite){
+void sprite_free(Sprite* sprite) {
     glDeleteTextures(1, &sprite->texture);
-
     free(sprite);
 }

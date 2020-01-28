@@ -121,7 +121,7 @@ void* update_dispatch(void* data) {
     // prevent disposal of pool for as long as this thread is running
     sync_semaphore_wait(&pool->dispose_lock);
 
-    List entities;
+    List entities = LIST_EMPTY;
 
     sync_semaphore_wait(&pool->update_trigger);
 
@@ -222,6 +222,9 @@ void update_workers_free(UpdateWorkerPool* pool) {
         sync_semaphore_wait(&pool->dispose_lock);
     }
 
+    for (int i = 0; i < NR_OF_UPDATE_LISTS; ++i) {
+        list_free(&pool->update_entities[i]);
+    }
     free(pool);
 }
 

@@ -85,7 +85,7 @@ static inline void sync_barrier_enter(sync_barrier* barrier){
 
     if (is_full){
         for (int i = 0; i < barrier->size - 1; ++i) {
-            sync_semaphore_post(barrier->departure.h);
+            sync_semaphore_post(&barrier->departure);
         }
     } else {
         sync_semaphore_wait(&barrier->departure);
@@ -166,9 +166,7 @@ static inline void sync_semaphore_post(sync_semaphore* sem) {
     ReleaseSemaphore(sem->h, 1, NULL);
 }
 
-#endif
-
-#if defined(__linux__) // TODO
+#elif defined(__linux__)
 
 static inline sync_semaphore sync_semaphore_new(int initial_count, int maximum_count){
     sem_t semaph;
@@ -202,6 +200,12 @@ static inline void sync_semaphore_wait(sync_semaphore* sem) {sem_wait(sem);}
 static inline bool sync_semaphore_trywait(sync_semaphore* sem) {sem_trywait(sem);}
 static inline void sync_semaphore_post(sync_semaphore* sem) {sem_post(sem);}
 
+#elif defined(MAC_OS)
+
+// TODO
+
 #endif
+
+
 
 #endif //YADF_SYNC_H

@@ -38,6 +38,7 @@ void entity_class_init() {
                 data->metadata_size = sizeof(struct EntityImplNaturalWall);
                 data->pre_update = entity_impl_empty_update;
                 data->post_update = entity_impl_empty_apply;
+                data->flags = ENTITY_FLAG_BLOCKING;
                 break;
 
             case VEGETATION_PATCH:
@@ -48,6 +49,7 @@ void entity_class_init() {
                 data->append_description = entity_impl_vegetation_patch_description;
                 data->pre_update = entity_impl_empty_update;
                 data->post_update = entity_impl_empty_apply;
+                data->flags = 0;
                 break;
 
             case BOID:
@@ -58,6 +60,7 @@ void entity_class_init() {
                 data->append_description = entity_impl_boid_description;
                 data->pre_update = entity_impl_boid_update;
                 data->post_update = entity_impl_boid_apply;
+                data->flags = 0;
                 break;
         }
 

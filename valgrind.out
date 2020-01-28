@@ -1,0 +1,26 @@
+{
+   ignore_glfw
+   Memcheck:Leak
+   ...
+   fun:glfwCreateWindow
+}
+{
+   ignore_X11
+   Memcheck:Leak
+   ...
+   obj:*/libX11.so.*
+}
+{
+   ignore_test_files_cutest
+   Memcheck:Leak
+   fun:malloc
+   fun:CuSuiteNew
+}
+{
+   ignore_test_files_entity
+   Memcheck:Leak
+   fun:malloc
+   fun:entity_new
+   ...
+   fun:CuTestRun
+}

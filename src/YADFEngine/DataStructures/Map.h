@@ -44,14 +44,6 @@ typedef void (* Supplier)(void* target, void* metadata);
 // an empty map
 static const ElementMap MAP_EMPTY = {};
 
-PURE static inline size_t _map_get_data_block_size(size_t element_size, int max_size, int num_bins) {
-    size_t bin_table_elt_size = sizeof(struct _MapNodeHeader*);
-    size_t header_size = sizeof(struct _MapNodeHeader);
-    return
-            bin_table_elt_size * num_bins + // pointer array, one element for each bin
-            (header_size + element_size) * max_size; // (header + element) array
-}
-
 /**
  * Initializes a map, assuming it is not initialized before.
  *
@@ -68,8 +60,11 @@ static inline ElementMap* map_init_sized(ElementMap* map, size_t element_size, i
     int num_bins = (int) ((float) capacity * backing_factor);
     map->_element_size = element_size;
     if (capacity > 0) {
-        map->_bins = malloc(_map_get_data_block_size(element_size, capacity, num_bins));
-        map->_data = &map->_bins[num_bins];
+        size_t bins_size = sizeof(struct _MapNodeHeader*) * num_bins; // pointer array, one element for each bin
+        size_t data_size = (sizeof(struct _MapNodeHeader) + element_size) * capacity;
+        // (header + element) array
+        map->_data = malloc(bins_size + data_size);
+        map->_bins = (struct _MapNodeHeader**) (map->_data + data_size);
     } else {
         map->_bins = NULL;
         map->_data = NULL;
@@ -91,14 +86,15 @@ static inline ElementMap* map_init(ElementMap* map, size_t element_size) {
     return map_init_sized(map, element_size, MAP_DEFAULT_SIZE, ((float) MAP_DEFAULT_BINS / MAP_DEFAULT_SIZE));
 }
 
-PURE static inline unsigned int hash(int key) {
+PURE static inline unsigned int map_hash(int key) {
     const unsigned int INT_PHI = 0x9E3779B9;
-    unsigned int hash = key * INT_PHI;
+    long l_key = (long) key - INT_MIN;
+    unsigned int hash = l_key * INT_PHI;
     return (hash ^ (hash >> 16));
 }
 
 static bool map_remove(ElementMap* map, int key) {
-    unsigned int bin = hash(key) % map->_num_bins;
+    unsigned int bin = map_hash(key) % map->_num_bins;
     struct _MapNodeHeader* map_node = map->_bins[bin];
     if (map_node == NULL) return false;
 
@@ -123,7 +119,7 @@ static bool map_remove(ElementMap* map, int key) {
 }
 
 /** reallocates the map, increasing size if appropriate */
-PURE static void map_realloc(ElementMap* map) {
+static void map_realloc(ElementMap* map) {
     int new_size;
 
     if (map->_max_size == 0) {
@@ -138,11 +134,13 @@ PURE static void map_realloc(ElementMap* map) {
 
     int new_num_bins = (int) ((float) new_size * map->_bin_factor);
 
-    size_t new_data_block_size = _map_get_data_block_size(map->_element_size, new_size, new_num_bins);
-    struct _MapNodeHeader** new_bins = malloc(new_data_block_size);
-    for (int i = 0; i < new_num_bins; ++i) new_bins[i] = NULL;
+    size_t bins_size = sizeof(struct _MapNodeHeader*) * new_num_bins;
+    size_t data_size = (sizeof(struct _MapNodeHeader) + map->_element_size) * new_size;
+    // (header + element) array
+    void* new_data = malloc(bins_size + data_size);
 
-    void* new_data = &new_bins[new_num_bins];
+    struct _MapNodeHeader** new_bins = (struct _MapNodeHeader**) (new_data + data_size);
+    for (int i = 0; i < new_num_bins; ++i) new_bins[i] = NULL;
 
     // transfer each element to new map
     int new_empty_index = 0;
@@ -150,7 +148,7 @@ PURE static void map_realloc(ElementMap* map) {
         struct _MapNodeHeader* old_elt = map->_bins[i];
 
         while (old_elt != NULL) {
-            unsigned int bin = hash(old_elt->_key) % new_num_bins;
+            unsigned int bin = map_hash(old_elt->_key) % new_num_bins;
             struct _MapNodeHeader* predecessor = new_bins[bin];
 
             size_t header_elt_size = map->_element_size + sizeof(struct _MapNodeHeader);
@@ -178,7 +176,7 @@ PURE static void map_realloc(ElementMap* map) {
         }
     }
 
-    free(map->_bins);
+    free(map->_data);
     map->_bins = new_bins;
     map->_data = new_data;
     map->_max_size = new_size;
@@ -189,6 +187,7 @@ PURE static void map_realloc(ElementMap* map) {
 /** returns the next empty element. If no space is available, the map is resized */
 static inline void* _map_get_next_empty(ElementMap* map) {
     if (map->_empty_index == map->_max_size) {
+        map->_data = NULL;
         // resize and re-allocate map
         map_realloc(map);
     }
@@ -197,9 +196,10 @@ static inline void* _map_get_next_empty(ElementMap* map) {
     return map->_data + (header_elt_size * map->_empty_index++);
 }
 
-static void map_insert(ElementMap* map, int key, const void* element) {
+/// returns a pointer to the new element
+static void* map_insert(ElementMap* map, int key, const void* element) {
     // set pointer
-    unsigned int bin = hash(key) % map->_num_bins;
+    unsigned int bin = map_hash(key) % map->_num_bins;
     struct _MapNodeHeader* node = map->_bins[bin];
 
     // find either the logical position, or an override
@@ -227,13 +227,15 @@ static void map_insert(ElementMap* map, int key, const void* element) {
     // node + 1 is right after the header
     memcpy(node + 1, element, map->_element_size);
     map->_size++;
+
+    return node + 1;
 }
 
 /** 
  * @return the element associated with the given key, or NULL if the key does not exist 
  */
 PURE static inline void* map_get(const ElementMap* map, int key) {
-    unsigned int bin = hash(key) % map->_num_bins;
+    unsigned int bin = map_hash(key) % map->_num_bins;
     struct _MapNodeHeader* map_node = map->_bins[bin];
 
     while (map_node != NULL) {
@@ -261,7 +263,7 @@ PURE static inline int map_get_size(const ElementMap* map) {
 }
 
 static inline void map_free(const ElementMap* map) {
-    free(map->_bins);
+    free(map->_data);
 }
 
 typedef struct {
@@ -335,7 +337,7 @@ PURE static inline bool map_iterator_has_next(MapIterator* iterator) {
  * List* elt = map_compute_if_absent(map, key, get_new_list, NULL);
  */
 PURE static inline void* map_compute_if_absent(ElementMap* map, int key, Supplier supplier, void* supplier_data) {
-    unsigned int bin = hash(key) % map->_num_bins;
+    unsigned int bin = map_hash(key) % map->_num_bins;
     struct _MapNodeHeader* node = map->_bins[bin];
 
     if (node == NULL) {
