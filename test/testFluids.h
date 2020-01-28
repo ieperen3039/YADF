@@ -164,11 +164,12 @@ void test_fluid_fill_area(CuTest* tc) {
     fluid_spawn(world, &coord, WATER, FLUID_AMOUNT_MAX);
   }
 
-  const int FLUID_ITERATIONS = 0;
+  const int FLUID_ITERATIONS = 1;
 
   for (int i = 0; i < FLUID_ITERATIONS; ++i) {
     print_fluid_levels(tc, world, 0);
     List* fluids = world_get_fluids_to_update(world);
+    LOG_INFO_F("updating %d tiles...", list_size(fluids));
 
     for (int j = 0; j < list_size(fluids); ++j) {
       FluidUpdateData* fd = list_get(fluids, j);

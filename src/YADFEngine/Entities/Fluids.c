@@ -54,10 +54,7 @@ void fluid_flow_update(FluidFlow* this, Vector3i position, WorldChunk* tile_chun
   }
 
   // collect amount of fluid available
-  int fluid_available = 0;
-  for (int i = 0; i < FluidTypeSize; ++i) {
-    fluid_available = this->amount_prev[i];
-  }
+  int fluid_available = this->amount_total_prev;
   int flow_budget = fluid_available; // this absolutely prevents fluids to be pushed up
   this->flow_out_total = fluid_available; // unless this tile will stack up, this will be the case
 
@@ -78,26 +75,41 @@ void fluid_flow_update(FluidFlow* this, Vector3i position, WorldChunk* tile_chun
   side_max_flow += max_flow[3];
   side_max_flow += max_flow[4];
 
-  const float side_flow = (flow_budget < side_max_flow) ? ((float) flow_budget / side_max_flow) : flow_budget;
+    if (flow_budget >= side_max_flow) {
+        this->flow_out_xp = max_flow[0];
+        this->flow_out_yp = max_flow[1];
+        this->flow_out_xn = max_flow[3];
+        this->flow_out_yn = max_flow[4];
+        
+    } else {
+        float side_flow = (float) flow_budget / side_max_flow;
 
-  // spread by pressure
-  this->flow_out_xp = (FluidAmount) (max_flow[0] * side_flow);
-  this->flow_out_yp = (FluidAmount) (max_flow[1] * side_flow);
-  this->flow_out_xn = (FluidAmount) (max_flow[3] * side_flow);
-  this->flow_out_yn = (FluidAmount) (max_flow[4] * side_flow);
+        // spread by pressure
+        FluidAmount flow_xp = (FluidAmount) (max_flow[0] * side_flow);
+        this->flow_out_xp = flow_xp;
+        FluidAmount flow_yp = (FluidAmount) (max_flow[1] * side_flow);
+        this->flow_out_yp = flow_yp;
+        FluidAmount flow_xn = (FluidAmount) (max_flow[3] * side_flow);
+        this->flow_out_xn = flow_xn;
 
-  flow_budget -= side_max_flow;
-  if (flow_budget <= 0) return;
+        FluidAmount remainder = side_max_flow - flow_xp - flow_yp - flow_xn;
+        this->flow_out_yn = (FluidAmount) min_i(max_flow[4], remainder); // reduced, but present chance of fluid deletion
+        return;
+    }
 
-  // reserve up to AMOUNT_MAX to not move at all
-  if (flow_budget > FLUID_AMOUNT_MAX) {
-    this->flow_out_zp = flow_budget - FLUID_AMOUNT_MAX; // if any is still left, push up
-    this->flow_out_total -= FLUID_AMOUNT_MAX;
-  } else {
-    this->flow_out_total -= flow_budget;
-  }
 
-  assert(this->flow_out_xp + this->flow_out_yp + this->flow_out_zp + this->flow_out_xn + this->flow_out_yn + this->flow_out_zn == this->flow_out_total);
+    if (side_max_flow > flow_budget) return;
+    flow_budget -= side_max_flow;
+
+    // reserve up to AMOUNT_MAX to not move at all
+    if (flow_budget > FLUID_AMOUNT_MAX) {
+        this->flow_out_zp = flow_budget - FLUID_AMOUNT_MAX; // if any is still left, push up
+        this->flow_out_total -= FLUID_AMOUNT_MAX;
+    } else {
+        this->flow_out_total -= flow_budget;
+    }
+
+    assert(this->flow_out_xp + this->flow_out_yp + this->flow_out_zp + this->flow_out_xn + this->flow_out_yn + this->flow_out_zn == this->flow_out_total);
 }
 
 void fluid_amount_update(FluidFlow* this, Vector3i position, WorldChunk* tile_chunk) {
